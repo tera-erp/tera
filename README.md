@@ -61,7 +61,6 @@ npm run dev --prefix ui
 ### Database
 
 - Configure env vars (or `.env`) consumed by `app/core/config.py` (DB URL, JWT secret, etc.).
-- Run migrations: `poetry run alembic upgrade head` (or `python run_migrations.py`).
 
 ## Adding a new module
 
