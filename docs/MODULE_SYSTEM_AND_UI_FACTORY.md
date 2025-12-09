@@ -3,11 +3,13 @@
 This document captures the current architecture and runtime flow for the YAML-driven module system and the UI Factory layer that renders modules dynamically. It supersedes earlier docs in `docs/`.
 
 ## Goals
+
 - Ship new business modules (finance, payroll, inventory, etc.) without shipping new frontend builds.
 - Keep a single YAML source of truth per module for screens, forms, workflows, permissions, and menus.
 - Make the UI renderers and action/workflow engines generic so they can operate on any valid module config.
 
 ## Backend architecture (FastAPI)
+
 - **Config source**: Each module lives under `app/modules/<module_id>/config.yaml` (see `app/modules/finance/config.yaml`, `app/modules/payroll/config.yaml`). The schema is defined by `app/modules/core/module.py` (Pydantic models such as `ModuleConfig`, `ScreenConfig`, `FormConfig`, `WorkflowConfig`, `ActionConfig`).
 - **Loader**: `ModuleLoader.load_all(modules_dir)` walks the modules directory (skips `core`, hidden, and non-directories), validates YAML into `ModuleConfig`, and keeps a map keyed by `module.id`.
 - **Startup**: `app/main.py` calls `modules.initialize_modules()` once. This populates the in-memory registry `_module_configs` used by the router.
@@ -19,7 +21,9 @@ This document captures the current architecture and runtime flow for the YAML-dr
 - **Action runtime (server)**: `app/modules/core/action.py` defines `ActionRegistry` and `execute_action` for custom/server actions. YAML `actions` section references handlers via `<module_id>.<action_name>`.
 
 ### YAML schema (high level)
+
 Key sections in a module `config.yaml` (examples: finance, payroll):
+
 - `module`: metadata (`id`, `name`, `version`, `description`, `author`, `icon`, `color`).
 - `screens`: map of screen definitions. Supported `type`: `list`, `detail`, `form`, `dashboard`, `custom`.
   - For lists: `endpoint`, `permissions`, `list_config` (columns, search, sort, filters, pagination, row actions).
@@ -32,6 +36,7 @@ Key sections in a module `config.yaml` (examples: finance, payroll):
 - `menu`: optional navigation tree for module landing page.
 
 ## Frontend architecture (UI Factory layer)
+
 Source: `ui/src/modules/*` and dynamic pages in `ui/src/pages/ModuleScreenPage.tsx`.
 
 - **Module loading**:
@@ -51,6 +56,7 @@ Source: `ui/src/modules/*` and dynamic pages in `ui/src/pages/ModuleScreenPage.t
 - **Types**: `ui/src/modules/types.ts` mirrors the backend Pydantic schema so YAML configs round-trip cleanly to the frontend.
 
 ## End-to-end flow
+
 1. **Authoring**: Define `config.yaml` under `app/modules/<id>/` using the schema above.
 2. **Startup**: FastAPI loads and validates configs via `ModuleLoader`, registers them in-memory.
 3. **API access**: Frontend fetches module config(s) from `/api/v1/modules` or `/api/v1/modules/:moduleId`.
@@ -59,12 +65,14 @@ Source: `ui/src/modules/*` and dynamic pages in `ui/src/pages/ModuleScreenPage.t
 6. **User actions**: List/detail views call backend endpoints defined in the screen/action configs; workflow transitions and row actions are executed through `ActionHandler`; `WorkflowEngine` guards allowed transitions on the client side.
 
 ## How to add a new module
+
 1. Create a folder `app/modules/<your_module>/` with `config.yaml` following the schema (copy from finance/payroll as a starting point).
 2. Place API endpoints referenced by the module under the appropriate router (or add new routers) so `screen.endpoint` and `actions.*.endpoint` resolve.
 3. Restart the backend (or reload) so `initialize_modules()` re-reads YAML.
 4. On the frontend, no build-time changes are required for basic list/detail/form screens—`ModuleScreenPage` renders from the fetched config. If you need custom React components per screen, register them with `ModuleFactory.registerModule()` and wire `screen.component` to the registered key.
 
 ## Extending the UI Factory (next steps/TODOs)
+
 - Load select/array options from `FormFieldConfig.endpoint` and render dynamic nested arrays.
 - Unify `ModuleScreenPage` with `DynamicScreen` and switch routing to `ModuleFactory.generateRoutes()` once stable.
 - Expand `ActionHandler` to support `custom` and `batch` client handlers and honor `on_success` actions (e.g., `refresh_form`, `navigate_to`).
@@ -72,6 +80,7 @@ Source: `ui/src/modules/*` and dynamic pages in `ui/src/pages/ModuleScreenPage.t
 - Add widget components for `detail_config.sidebar.widgets` and render related records list/table.
 
 ## Quick references
+
 - Backend schema & loader: `app/modules/core/module.py`, `app/modules/core/action.py`.
 - Backend API: `app/routers/modules.py` (initialized in `app/main.py`).
 - Example configs: `app/modules/finance/config.yaml`, `app/modules/payroll/config.yaml`.
