@@ -1,0 +1,8 @@
+name: tera-erp-sast
+paths:
+  - app
+  - ui/src
+paths-ignore:
+  - ui/dist
+  - ui/node_modules
+  - '**/tests/**'

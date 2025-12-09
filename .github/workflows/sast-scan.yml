@@ -46,6 +46,7 @@ jobs:
         uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
+          config-file: ./.github/codeql/codeql-config.yml
           # If you wish to specify a different query suite, add it here.
           # queries: security-extended,security-and-quality
 
@@ -77,30 +78,10 @@ jobs:
         uses: github/codeql-action/analyze@v3
         with:
           category: "/language:${{matrix.language}}"
+          output: codeql-results
 
       - name: Upload SARIF file
         uses: actions/upload-artifact@v4
         with:
           name: codeql-sarif-${{ matrix.language }}
-          path: ../results/${{ matrix.language }}.sarif
-
-  create-issue-from-scan:
-    name: Create Issue on Findings
-    runs-on: ubuntu-latest
-    needs: [codeql]
-    if: always() && (needs.codeql.result == 'success')
-
-    steps:
-      - name: Download all SARIF files
-        uses: actions/download-artifact@v4
-        with:
-          path: sarif-reports
-
-      - name: Create Issue From File
-        uses: peter-evans/create-issue-from-file@v5
-        with:
-          title: "SAST Scan Findings Detected"
-          content-filepath: |
-            sarif-reports/codeql-sarif-python/python.sarif
-            sarif-reports/codeql-sarif-javascript/javascript.sarif
-          labels: "security, bug"
+          path: codeql-results/${{ matrix.language }}.sarif
