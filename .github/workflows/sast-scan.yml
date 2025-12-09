@@ -24,6 +24,8 @@ permissions:
   contents: read
   # required for uploading security findings
   security-events: write
+  # required for creating issues
+  issues: write
 
 jobs:
   codeql:
@@ -47,10 +49,58 @@ jobs:
           # If you wish to specify a different query suite, add it here.
           # queries: security-extended,security-and-quality
 
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
+      - name: Set up Python for build
+        if: matrix.language == 'python'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Python dependencies
+        if: matrix.language == 'python'
+        run: |
+          pip install poetry
+          poetry install
+
+      - name: Set up Node.js for build
+        if: matrix.language == 'javascript'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+
+      - name: Install JS dependencies and build
+        if: matrix.language == 'javascript'
+        run: |
+          npm install --prefix ui
+          npm run build --prefix ui
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
         with:
           category: "/language:${{matrix.language}}"
+
+      - name: Upload SARIF file
+        uses: actions/upload-artifact@v4
+        with:
+          name: codeql-sarif-${{ matrix.language }}
+          path: ../results/${{ matrix.language }}.sarif
+
+  create-issue-from-scan:
+    name: Create Issue on Findings
+    runs-on: ubuntu-latest
+    needs: [codeql]
+    if: always() && (needs.codeql.result == 'success')
+
+    steps:
+      - name: Download all SARIF files
+        uses: actions/download-artifact@v4
+        with:
+          path: sarif-reports
+
+      - name: Create Issue From File
+        uses: peter-evans/create-issue-from-file@v5
+        with:
+          title: "SAST Scan Findings Detected"
+          content-filepath: |
+            sarif-reports/codeql-sarif-python/python.sarif
+            sarif-reports/codeql-sarif-javascript/javascript.sarif
+          labels: "security, bug"
