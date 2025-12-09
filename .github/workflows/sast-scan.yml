@@ -6,11 +6,17 @@ on:
     branches:
       - main
       - develop
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
 
   # Run on push to main
   push:
     branches:
       - main
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
 
   # Nightly scan at 2 AM UTC
   schedule:
