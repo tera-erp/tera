@@ -1,0 +1,56 @@
+name: SAST Scan
+
+on:
+  # Run on pull requests against main and develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+  # Run on push to main
+  push:
+    branches:
+      - main
+
+  # Nightly scan at 2 AM UTC
+  schedule:
+    - cron: '0 2 * * *'
+
+  # Allow manual trigger
+  workflow_dispatch:
+
+permissions:
+  # required for all workflows
+  contents: read
+  # required for uploading security findings
+  security-events: write
+
+jobs:
+  codeql:
+    name: CodeQL SAST Scan
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ['python', 'javascript']
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Initializes the CodeQL tools for scanning.
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          # If you wish to specify a different query suite, add it here.
+          # queries: security-extended,security-and-quality
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{matrix.language}}"

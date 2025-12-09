@@ -1,0 +1,64 @@
+# Permissions and menu configuration
+permissions:
+  # Employee Management
+  - payroll.view_employee
+  - payroll.create_employee
+  - payroll.edit_employee
+  - payroll.delete_employee
+  - payroll.manage_employee
+  
+  # Payroll Processing
+  - payroll.view_payroll
+  - payroll.create_payroll
+  - payroll.process_payroll
+  - payroll.approve_payroll
+  - payroll.release_payment
+  
+  # Payslip Management
+  - payroll.view_payslip
+  - payroll.export_payslip
+  - payroll.download_payslip
+  
+  # Leave Management
+  - payroll.view_leave
+  - payroll.create_leave
+  - payroll.approve_leave
+  - payroll.reject_leave
+  
+  # Attendance
+  - payroll.view_attendance
+  - payroll.create_attendance
+  - payroll.edit_attendance
+  
+  # Reports
+  - payroll.view_reports
+
+menu:
+  - id: payroll_module
+    title: Payroll & HR
+    icon: Users
+    items:
+      - title: Employees
+        path: /modules/payroll/employees
+        icon: Users
+        permission: payroll.view_employee
+      - title: Payroll Runs
+        path: /modules/payroll/payroll-runs
+        icon: Calculator
+        permission: payroll.view_payroll
+      - title: Payslips
+        path: /modules/payroll/payslips
+        icon: FileText
+        permission: payroll.view_payslip
+      - title: Leave Requests
+        path: /modules/payroll/leave-requests
+        icon: Calendar
+        permission: payroll.view_leave
+      - title: Leave Balances
+        path: /modules/payroll/leave-balances
+        icon: PieChart
+        permission: payroll.view_leave
+      - title: Attendance
+        path: /modules/payroll/attendance
+        icon: Clock
+        permission: payroll.view_attendance

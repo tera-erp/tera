@@ -1,0 +1,250 @@
+# Payroll run screens and forms
+screens:
+  payroll_list:
+    title: Payroll Runs
+    description: View and manage payroll processing runs
+    path: /modules/payroll/payroll-runs
+    type: list
+    endpoint: /api/v1/payroll/runs/
+    permissions: [payroll.view_payroll]
+    create_screen: payroll_run_form
+    list_config:
+      columns: [run_number, period_name, period_start, period_end, employee_count, total_gross, total_net, state]
+      searchable_fields: [run_number, period_name]
+      sortable: true
+      filterable: true
+      filters:
+        - field: state
+          type: select
+          options:
+            - {value: "draft", label: "Draft"}
+            - {value: "calculated", label: "Calculated"}
+            - {value: "approved", label: "Approved"}
+            - {value: "paid", label: "Paid"}
+            - {value: "closed", label: "Closed"}
+      paginated: true
+      page_size: 25
+      row_actions:
+        - id: view
+          label: View
+          icon: Eye
+          action: view
+        - id: calculate
+          label: Calculate
+          icon: Calculator
+          action: calculate
+          visible_when: "state == 'draft'"
+          permissions: [payroll.process_payroll]
+        - id: approve
+          label: Approve
+          icon: CheckCircle
+          action: approve
+          visible_when: "state == 'calculated'"
+          permissions: [payroll.approve_payroll]
+        - id: mark_paid
+          label: Mark as Paid
+          icon: DollarSign
+          action: mark_paid
+          visible_when: "state == 'approved'"
+          permissions: [payroll.process_payroll]
+
+  payroll_run_detail:
+    title: Payroll Run
+    path: /modules/payroll/payroll-runs/{id}
+    type: detail
+    endpoint: /api/v1/payroll/runs/{id}/
+    permissions: [payroll.view_payroll]
+    show_in_nav: false
+    detail_config:
+      show_metadata: true
+      show_related: true
+      sidebar:
+        show_metadata: true
+      related_records:
+        - label: Payslips
+          endpoint: /api/v1/payroll/runs/{id}/payslips
+          display_field: employee_name
+
+  payroll_run_form:
+    title: Create Payroll Run
+    path: /modules/payroll/payroll-runs/new
+    type: form
+    endpoint: /api/v1/payroll/runs/
+    permissions: [payroll.create_payroll]
+    show_in_nav: false
+
+  payslip_list:
+    title: Payslips
+    description: View all employee payslips
+    path: /modules/payroll/payslips
+    type: list
+    endpoint: /api/v1/payroll/payslips/
+    permissions: [payroll.view_payslip]
+    list_config:
+      columns: [payslip_number, employee_name, period_name, gross_salary, net_salary, payment_status]
+      searchable_fields: [payslip_number, employee_name, period_name]
+      sortable: true
+      filterable: true
+      filters:
+        - field: payment_status
+          type: select
+          options:
+            - {value: "pending", label: "Pending"}
+            - {value: "paid", label: "Paid"}
+            - {value: "failed", label: "Failed"}
+        - field: period_start
+          type: date_range
+          label: Period
+      paginated: true
+      page_size: 50
+      row_actions:
+        - id: view
+          label: View
+          icon: Eye
+          action: view
+        - id: download
+          label: Download PDF
+          icon: Download
+          action: download_pdf
+
+  payslip_detail:
+    title: Payslip
+    path: /modules/payroll/payslips/{id}
+    type: detail
+    endpoint: /api/v1/payroll/payslips/{id}/
+    permissions: [payroll.view_payslip]
+    show_in_nav: false
+    detail_config:
+      show_metadata: true
+
+forms:
+  payroll_run_form:
+    title: Payroll Run
+    description: Create a new payroll run
+    fields:
+      period_name:
+        type: text
+        label: Period Name
+        required: true
+        placeholder: "e.g., January 2024"
+        help_text: "Enter a descriptive name for this payroll period"
+        size: full
+
+      period_start:
+        type: date
+        label: Period Start Date
+        required: true
+        size: half
+
+      period_end:
+        type: date
+        label: Period End Date
+        required: true
+        size: half
+
+      payment_date:
+        type: date
+        label: Payment Date
+        required: true
+        help_text: "Expected payment date for employees"
+        size: half
+
+      notes:
+        type: textarea
+        label: Notes
+        required: false
+        placeholder: "Additional notes or instructions"
+        size: full
+
+    layout:
+      type: simple
+      sections:
+        - title: Period Information
+          fields: [period_name, period_start, period_end, payment_date, notes]
+
+  payslip_form:
+    title: Payslip
+    description: Employee payslip details
+    fields:
+      # Header
+      payslip_number:
+        type: text
+        label: Payslip Number
+        readonly: true
+        size: half
+
+      employee_name:
+        type: text
+        label: Employee Name
+        readonly: true
+        size: half
+
+      period_name:
+        type: text
+        label: Period
+        readonly: true
+        size: half
+
+      # Earnings
+      base_salary:
+        type: decimal
+        label: Base Salary
+        readonly: true
+        size: half
+
+      worked_days:
+        type: number
+        label: Worked Days
+        readonly: true
+        size: third
+
+      total_days:
+        type: number
+        label: Total Days
+        readonly: true
+        size: third
+
+      overtime_hours:
+        type: number
+        label: Overtime Hours
+        readonly: true
+        size: half
+
+      overtime_amount:
+        type: decimal
+        label: Overtime Amount
+        readonly: true
+        size: half
+
+      gross_salary:
+        type: decimal
+        label: Gross Salary
+        readonly: true
+        size: full
+
+      # Deductions
+      total_deductions:
+        type: decimal
+        label: Total Deductions
+        readonly: true
+        size: full
+
+      # Net
+      net_salary:
+        type: decimal
+        label: Net Salary
+        readonly: true
+        size: full
+
+    layout:
+      type: tabs
+      sections:
+        - title: Basic Information
+          icon: FileText
+          fields: [payslip_number, employee_name, period_name]
+        - title: Earnings
+          icon: TrendingUp
+          fields: [base_salary, worked_days, total_days, overtime_hours, overtime_amount, gross_salary]
+        - title: Summary
+          icon: DollarSign
+          fields: [gross_salary, total_deductions, net_salary]

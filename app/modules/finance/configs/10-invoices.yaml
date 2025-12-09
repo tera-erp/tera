@@ -1,0 +1,141 @@
+# Invoice screens and forms
+screens:
+  invoices:
+    title: Invoices
+    description: Manage all customer invoices
+    path: /modules/finance/invoices
+    type: list
+    endpoint: /api/v1/invoices/
+    permissions: [finance.view_invoice]
+    create_screen: invoice_detail
+    list_config:
+      columns: [invoice_number, customer_name, total, status, invoice_date]
+      searchable_fields: [invoice_number, customer_name]
+      sortable: true
+      filterable: true
+      paginated: true
+      page_size: 25
+      selectable: true
+      row_actions:
+        - id: view
+          label: View
+          icon: Eye
+          action: view
+        - id: edit
+          label: Edit
+          icon: Edit2
+          action: edit
+        - id: print
+          label: Print
+          icon: Printer
+          action: print
+          print_endpoint: /api/v1/invoices/{id}/document
+          print_formats: [pdf, html, json, xml]
+        - id: delete
+          label: Delete
+          icon: Trash2
+          action: delete
+          confirm: true
+
+  invoice_detail:
+    title: Invoice Details
+    path: /modules/finance/invoices/{id}
+    type: detail
+    endpoint: /api/v1/invoices/{id}/
+    permissions: [finance.view_invoice]
+    show_in_nav: false
+    printable: true
+    print_endpoint: /api/v1/invoices/{id}/document
+    print_formats: [pdf, html, json, xml]
+    detail_config:
+      form: invoice_form
+      show_metadata: true
+      show_related: true
+      sidebar:
+        show_metadata: true
+        widgets: [status_widget, timeline_widget]
+      related_records:
+        - label: Payments
+          endpoint: /api/v1/invoices/{id}/payments
+          display_field: payment_date
+
+forms:
+  invoice_form:
+    title: Create Invoice
+    description: Create a new invoice
+    edit_title: Edit Invoice
+    edit_description: Update invoice details
+    edit_submit_label: Update Invoice
+    fields:
+      customer_id:
+        type: select
+        label: Customer
+        required: true
+        endpoint: /api/v1/invoices/customers
+        value_field: id
+        display_field: name
+        placeholder: Select customer
+        size: half
+
+      invoice_date:
+        type: date
+        label: Invoice Date
+        required: true
+        default: today
+        size: half
+
+      currency_code:
+        type: select
+        label: Currency
+        required: true
+        options:
+          - value: USD
+            label: USD
+          - value: EUR
+            label: EUR
+          - value: GBP
+            label: GBP
+        default: USD
+        size: half
+
+      amount_untaxed:
+        type: decimal
+        label: Subtotal
+        required: false
+        size: half
+
+      amount_tax:
+        type: decimal
+        label: Tax Amount
+        required: false
+        default: 0
+        size: half
+
+      amount_total:
+        type: decimal
+        label: Total Amount
+        required: true
+        size: half
+
+      notes:
+        type: textarea
+        label: Notes
+        required: false
+        help_text: For internal use only
+        size: full
+
+    layout:
+      type: tabs
+      sections:
+        - title: Basic Information
+          description: Invoice header and customer details
+          icon: FileText
+          fields: [customer_id, invoice_date, currency_code]
+        - title: Totals
+          description: Amounts
+          icon: DollarSign
+          fields: [amount_untaxed, amount_tax, amount_total]
+        - title: Notes
+          description: Additional notes
+          icon: StickyNote
+          fields: [notes]

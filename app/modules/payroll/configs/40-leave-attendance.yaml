@@ -1,0 +1,162 @@
+# Leave Management
+screens:
+  leave_request_list:
+    title: Leave Requests
+    description: Manage employee leave requests
+    path: /modules/payroll/leave-requests
+    type: list
+    endpoint: /api/v1/payroll/leave-requests/
+    permissions: [payroll.view_leave]
+    create_screen: leave_request_form
+    list_config:
+      columns: [request_number, employee_name, leave_type, start_date, end_date, total_days, status]
+      searchable_fields: [request_number, employee_name]
+      sortable: true
+      filterable: true
+      filters:
+        - field: status
+          type: select
+          options:
+            - {value: "pending", label: "Pending"}
+            - {value: "approved", label: "Approved"}
+            - {value: "rejected", label: "Rejected"}
+        - field: leave_type
+          type: select
+          options:
+            - {value: "annual", label: "Annual Leave"}
+            - {value: "sick", label: "Sick Leave"}
+            - {value: "maternity", label: "Maternity Leave"}
+            - {value: "paternity", label: "Paternity Leave"}
+      paginated: true
+      page_size: 25
+      row_actions:
+        - id: view
+          label: View
+          icon: Eye
+          action: view
+        - id: approve
+          label: Approve
+          icon: CheckCircle
+          action: approve
+          permissions: [payroll.approve_leave]
+          visible_when: "status == 'pending'"
+        - id: reject
+          label: Reject
+          icon: XCircle
+          action: reject
+          permissions: [payroll.approve_leave]
+          visible_when: "status == 'pending'"
+
+  leave_request_form:
+    title: Leave Request
+    path: /modules/payroll/leave-requests/new
+    type: form
+    endpoint: /api/v1/payroll/leave-requests/
+    permissions: [payroll.create_leave]
+    show_in_nav: false
+
+  leave_balance_list:
+    title: Leave Balances
+    description: View employee leave balances
+    path: /modules/payroll/leave-balances
+    type: list
+    endpoint: /api/v1/payroll/leave-balances/
+    permissions: [payroll.view_leave]
+    list_config:
+      columns: [employee_name, leave_type, year, entitled_days, used_days, remaining_days]
+      searchable_fields: [employee_name]
+      sortable: true
+      filterable: true
+      paginated: true
+      page_size: 25
+
+  attendance_list:
+    title: Attendance
+    description: Track employee attendance
+    path: /modules/payroll/attendance
+    type: list
+    endpoint: /api/v1/payroll/attendance/
+    permissions: [payroll.view_attendance]
+    create_screen: attendance_form
+    list_config:
+      columns: [employee_name, attendance_date, clock_in, clock_out, worked_hours, is_late]
+      searchable_fields: [employee_name]
+      sortable: true
+      filterable: true
+      filters:
+        - field: attendance_date
+          type: date_range
+        - field: is_late
+          type: boolean
+      paginated: true
+      page_size: 50
+
+forms:
+  leave_request_form:
+    title: Leave Request
+    description: Submit a new leave request
+    fields:
+      employee_id:
+        type: select
+        label: Employee
+        required: true
+        endpoint: /api/v1/payroll/employees
+        display_field: name
+        value_field: id
+        searchable: true
+        size: full
+
+      leave_type:
+        type: select
+        label: Leave Type
+        required: true
+        size: half
+        options:
+          - {value: "annual", label: "Annual Leave"}
+          - {value: "sick", label: "Sick Leave"}
+          - {value: "maternity", label: "Maternity Leave"}
+          - {value: "paternity", label: "Paternity Leave"}
+          - {value: "unpaid", label: "Unpaid Leave"}
+          - {value: "compassionate", label: "Compassionate Leave"}
+
+      start_date:
+        type: date
+        label: Start Date
+        required: true
+        size: half
+
+      end_date:
+        type: date
+        label: End Date
+        required: true
+        size: half
+
+      total_days:
+        type: number
+        label: Total Days
+        readonly: true
+        formula: "calculateLeaveDays(start_date, end_date)"
+        size: half
+
+      reason:
+        type: textarea
+        label: Reason
+        required: true
+        placeholder: "Provide reason for leave request"
+        size: full
+
+      attachment_url:
+        type: file
+        label: Supporting Document
+        required: false
+        help_text: "Upload medical certificate or other supporting documents"
+        size: full
+        accept: ".pdf,.jpg,.jpeg,.png"
+
+    layout:
+      type: simple
+      sections:
+        - title: Leave Details
+          fields: [employee_id, leave_type, start_date, end_date, total_days]
+        - title: Additional Information
+          fields: [reason, attachment_url]

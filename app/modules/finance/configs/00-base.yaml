@@ -1,0 +1,9 @@
+# Base module configuration
+module:
+  id: finance
+  name: Finance
+  version: 2.0.0
+  description: Invoice and payment management
+  author: Tera ERP
+  icon: FileText
+  color: module-finance

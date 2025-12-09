@@ -1,0 +1,29 @@
+# Permissions and menu
+permissions:
+  - finance.view_invoice
+  - finance.create_invoice
+  - finance.edit_invoice
+  - finance.delete_invoice
+  - finance.approve_invoice
+  - finance.view_payment
+  - finance.create_payment
+  - finance.edit_payment
+  - finance.delete_payment
+
+menu:
+  - id: finance_module
+    title: Finance
+    icon: FileText
+    items:
+      - title: Invoices
+        path: /modules/finance/invoices
+        icon: FileText
+        permission: finance.view_invoice
+      - title: Customers
+        path: /modules/finance/customers
+        icon: Users
+        permission: finance.view_invoice
+      - title: Payments
+        path: /modules/finance/payments
+        icon: CreditCard
+        permission: finance.view_payment

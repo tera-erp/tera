@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # to drop postgresl data db run:
+  # docker exec -it tera-erp-postgres psql -U testuser -d testdb -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;" 
+  db:
+    image: postgres:15-alpine
+    container_name: tera-erp-postgres
+    environment:
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testpassword
+      POSTGRES_DB: testdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U testuser -d testdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend.Dockerfile
+    container_name: tera-erp-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app/app # Mount local 'app' src to container for live reload
+    environment:
+      - PROJECT_NAME=TeraERP
+      - SECRET_KEY=a-very-secret-key-that-you-should-change
+      - POSTGRES_SERVER=db
+      - POSTGRES_USER=testuser
+      - POSTGRES_PASSWORD=testpassword
+      - POSTGRES_DB=testdb
+      - POSTGRES_PORT=5432
+      # Allow frontend service on Docker network and localhost for local development
+      - BACKEND_CORS_ORIGINS=["http://localhost:8080","http://127.0.0.1:8080","http://frontend:8080"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend.Dockerfile
+    container_name: tera-erp-frontend
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./ui:/app # Mount local 'ui' src to container for live reload
+      - /app/node_modules # Isolate node_modules in the container
+    depends_on:
+      backend:
+        condition: service_started
+
+volumes:
+  postgres_data:
+    driver: local

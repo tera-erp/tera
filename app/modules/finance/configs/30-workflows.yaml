@@ -1,0 +1,124 @@
+# Invoice workflows
+workflows:
+  invoice_workflow:
+    title: Invoice Lifecycle
+    initial_state: draft
+    states:
+      draft:
+        label: Draft
+        color: gray
+        can_transition_to: [submitted]
+        allow_edit: true
+        allow_delete: true
+      
+      submitted:
+        label: Submitted
+        color: blue
+        can_transition_to: [draft, approved]
+        allow_edit: false
+        allow_delete: false
+      
+      approved:
+        label: Approved
+        color: green
+        can_transition_to: [paid, cancelled]
+        allow_edit: false
+        allow_delete: false
+      
+      paid:
+        label: Paid
+        color: green
+        can_transition_to: []
+        allow_edit: false
+        allow_delete: false
+      
+      cancelled:
+        label: Cancelled
+        color: red
+        can_transition_to: []
+        allow_edit: false
+        allow_delete: false
+    
+    transitions:
+      submit:
+        from: draft
+        to: submitted
+        label: Submit Invoice
+        action: finance.submit_invoice
+        confirm_message: Submit this invoice for approval?
+        disabled_if: "!form_valid || total == 0"
+      
+      approve:
+        from: submitted
+        to: approved
+        label: Approve
+        action: finance.approve_invoice
+        confirm_message: Approve this invoice?
+        permissions: [finance.approve_invoice]
+      
+      reject:
+        from: submitted
+        to: draft
+        label: Reject
+        action: finance.reject_invoice
+        permissions: [finance.approve_invoice]
+      
+      mark_paid:
+        from: approved
+        to: paid
+        label: Mark as Paid
+        action: finance.mark_paid
+      
+      cancel:
+        from: draft
+        to: cancelled
+        label: Cancel
+        action: finance.cancel_invoice
+
+actions:
+  submit_invoice:
+    type: api
+    method: POST
+    endpoint: /api/v1/invoices/{id}/submit
+    success_message: Invoice submitted for approval
+    error_message: Failed to submit invoice
+    on_success:
+      - action: refresh_form
+      - action: navigate_to
+        target: /finance/invoices
+  
+  approve_invoice:
+    type: api
+    method: POST
+    endpoint: /api/v1/invoices/{id}/approve
+    success_message: Invoice approved successfully
+    error_message: Failed to approve invoice
+    on_success:
+      - action: refresh_form
+  
+  reject_invoice:
+    type: api
+    method: POST
+    endpoint: /api/v1/invoices/{id}/reject
+    success_message: Invoice rejected
+    error_message: Failed to reject invoice
+    on_success:
+      - action: refresh_form
+  
+  mark_paid:
+    type: api
+    method: POST
+    endpoint: /api/v1/invoices/{id}/mark-paid
+    success_message: Invoice marked as paid
+    error_message: Failed to mark invoice as paid
+    on_success:
+      - action: refresh_form
+  
+  cancel_invoice:
+    type: api
+    method: POST
+    endpoint: /api/v1/invoices/{id}/cancel
+    success_message: Invoice cancelled
+    error_message: Failed to cancel invoice
+    on_success:
+      - action: refresh_form

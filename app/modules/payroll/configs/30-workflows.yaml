@@ -1,0 +1,177 @@
+# Workflows, actions, and state management
+workflows:
+  employee_workflow:
+    title: Employee Lifecycle
+    initial_state: active
+    states:
+      active:
+        label: Active
+        color: green
+        can_transition_to: [inactive, terminated]
+        allow_edit: true
+        allow_delete: false
+
+      inactive:
+        label: Inactive
+        color: yellow
+        can_transition_to: [active, terminated]
+        allow_edit: false
+        allow_delete: false
+
+      terminated:
+        label: Terminated
+        color: red
+        can_transition_to: []
+        allow_edit: false
+        allow_delete: false
+
+    transitions:
+      deactivate:
+        from: active
+        to: inactive
+        label: Deactivate Employee
+        action: payroll.deactivate_employee
+        confirm_message: Deactivate this employee?
+        permissions: [payroll.manage_employee]
+
+      reactivate:
+        from: inactive
+        to: active
+        label: Reactivate Employee
+        action: payroll.reactivate_employee
+        permissions: [payroll.manage_employee]
+
+      terminate:
+        from: active
+        to: terminated
+        label: Terminate Employment
+        action: payroll.terminate_employee
+        confirm_message: Terminate this employee? This cannot be undone.
+        permissions: [payroll.manage_employee]
+
+  payroll_workflow:
+    title: Payroll Processing
+    initial_state: draft
+    states:
+      draft:
+        label: Draft
+        color: gray
+        can_transition_to: [processing, completed]
+        allow_edit: true
+        allow_delete: true
+
+      processing:
+        label: Processing
+        color: blue
+        can_transition_to: [completed, draft]
+        allow_edit: false
+        allow_delete: false
+
+      completed:
+        label: Completed
+        color: green
+        can_transition_to: [paid]
+        allow_edit: false
+        allow_delete: false
+
+      paid:
+        label: Paid
+        color: green
+        can_transition_to: []
+        allow_edit: false
+        allow_delete: false
+
+    transitions:
+      process:
+        from: draft
+        to: processing
+        label: Start Processing
+        action: payroll.process_payroll
+        confirm_message: Begin payroll processing for this period?
+        disabled_if: "employee_count == 0"
+
+      complete:
+        from: processing
+        to: completed
+        label: Complete Processing
+        action: payroll.complete_payroll
+        confirm_message: Mark payroll as complete?
+
+      release_payment:
+        from: completed
+        to: paid
+        label: Release Payment
+        action: payroll.release_payment
+        confirm_message: Release payment to all employees?
+        permissions: [payroll.release_payment]
+
+      revert:
+        from: processing
+        to: draft
+        label: Revert to Draft
+        action: payroll.revert_payroll
+
+actions:
+  deactivate_employee:
+    type: api
+    method: POST
+    endpoint: /api/v1/employees/{id}/deactivate
+    success_message: Employee deactivated
+    error_message: Failed to deactivate employee
+    on_success:
+      - action: refresh_form
+
+  reactivate_employee:
+    type: api
+    method: POST
+    endpoint: /api/v1/employees/{id}/reactivate
+    success_message: Employee reactivated
+    error_message: Failed to reactivate employee
+    on_success:
+      - action: refresh_form
+
+  terminate_employee:
+    type: api
+    method: POST
+    endpoint: /api/v1/employees/{id}/terminate
+    success_message: Employee terminated
+    error_message: Failed to terminate employee
+    on_success:
+      - action: navigate_to
+        target: /modules/payroll/employees
+
+  process_payroll:
+    type: api
+    method: POST
+    endpoint: /api/v1/payroll-runs/{id}/process
+    success_message: Payroll processing started
+    error_message: Failed to start payroll processing
+    on_success:
+      - action: refresh_form
+
+  complete_payroll:
+    type: api
+    method: POST
+    endpoint: /api/v1/payroll-runs/{id}/complete
+    success_message: Payroll processing completed
+    error_message: Failed to complete payroll
+    on_success:
+      - action: refresh_form
+
+  release_payment:
+    type: api
+    method: POST
+    endpoint: /api/v1/payroll-runs/{id}/release
+    success_message: Payment released to all employees
+    error_message: Failed to release payment
+    on_success:
+      - action: refresh_form
+
+  revert_payroll:
+    type: api
+    method: POST
+    endpoint: /api/v1/payroll-runs/{id}/revert
+    success_message: Payroll reverted to draft
+    error_message: Failed to revert payroll
+    on_success:
+      - action: refresh_form

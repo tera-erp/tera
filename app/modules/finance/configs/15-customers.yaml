@@ -1,0 +1,103 @@
+# Finance Customers screens and forms
+screens:
+  customers:
+    title: Customers
+    description: Manage customers/partners
+    path: /modules/finance/customers
+    type: list
+    endpoint: /api/v1/invoices/customers
+    permissions: [finance.view_invoice]
+    create_screen: customer_detail
+    list_config:
+      columns: [name, country_code, email, phone, tax_id]
+      searchable_fields: [name, email, phone]
+      sortable: true
+      filterable: true
+      paginated: true
+      page_size: 25
+      selectable: false
+      row_actions:
+        - id: view
+          label: View
+          icon: Eye
+          action: view
+        - id: edit
+          label: Edit
+          icon: Edit2
+          action: edit
+
+  customer_detail:
+    title: Customer Details
+    path: /modules/finance/customers/{id}
+    type: detail
+    endpoint: /api/v1/invoices/customers/{id}
+    permissions: [finance.view_invoice]
+    show_in_nav: false
+    printable: false
+    detail_config:
+      form: customer_form
+      show_metadata: true
+      show_related: false
+
+forms:
+  customer_form:
+    title: Create Customer
+    description: Create a customer/partner
+    edit_title: Edit Customer
+    edit_description: Update customer details
+    edit_submit_label: Update Customer
+    fields:
+      name:
+        type: text
+        label: Name
+        required: true
+        size: half
+
+      country_code:
+        type: select
+        label: Country
+        required: true
+        options:
+          - value: US
+            label: United States
+          - value: SG
+            label: Singapore
+          - value: ID
+            label: Indonesia
+          - value: GB
+            label: United Kingdom
+          - value: DE
+            label: Germany
+        default: US
+        size: half
+
+      email:
+        type: text
+        label: Email
+        required: false
+        size: half
+
+      phone:
+        type: text
+        label: Phone
+        required: false
+        size: half
+
+      tax_id:
+        type: text
+        label: Tax ID
+        required: false
+        size: half
+
+      address:
+        type: textarea
+        label: Address
+        required: false
+        size: full
+
+    layout:
+      type: grid
+      columns: 2
+      sections:
+        - title: Customer Info
+          fields: [name, country_code, email, phone, tax_id, address]

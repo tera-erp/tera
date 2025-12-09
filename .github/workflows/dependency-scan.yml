@@ -1,0 +1,330 @@
+name: Dependency Security Scan
+
+on:
+  # Run on pull requests
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'pyproject.toml'
+      - 'poetry.lock'
+      - 'ui/package.json'
+      - 'ui/package-lock.json'
+      - 'ui/yarn.lock'
+      - '.github/workflows/dependency-scan.yml'
+
+  # Run on push to main
+  push:
+    branches:
+      - main
+    paths:
+      - 'pyproject.toml'
+      - 'poetry.lock'
+      - 'ui/package.json'
+      - 'ui/package-lock.json'
+      - 'ui/yarn.lock'
+
+  # Nightly scan at 1 AM UTC
+  schedule:
+    - cron: '0 1 * * *'
+
+  # Allow manual trigger
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  python-dependencies:
+    name: Scan Python Dependencies
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install Poetry Export Plugin
+        run: |
+          poetry self add poetry-plugin-export
+
+      - name: Export requirements
+        run: |
+          poetry export -f requirements.txt --output requirements.txt --without-hashes
+
+      - name: Run Safety check
+        id: safety
+        continue-on-error: true
+        run: |
+          pip install safety
+          safety check --json --file=requirements.txt > safety-results.json || true
+
+      - name: Run pip-audit
+        id: pip_audit
+        continue-on-error: true
+        run: |
+          pip install pip-audit
+          pip-audit --requirement requirements.txt --format json --output pip-audit-results.json || true
+
+      - name: Process Python dependency findings
+        id: python_findings
+        if: always()
+        run: |
+          TOTAL=0
+
+          # Count Safety findings
+          if [ -f safety-results.json ]; then
+            SAFETY_COUNT=$(jq '.vulnerabilities | length' safety-results.json 2>/dev/null || echo "0")
+            TOTAL=$((TOTAL + SAFETY_COUNT))
+            echo "Found $SAFETY_COUNT vulnerabilities via Safety"
+          fi
+
+          # Count pip-audit findings
+          if [ -f pip-audit-results.json ]; then
+            AUDIT_COUNT=$(jq '.vulnerabilities | length' pip-audit-results.json 2>/dev/null || echo "0")
+            TOTAL=$((TOTAL + AUDIT_COUNT))
+            echo "Found $AUDIT_COUNT vulnerabilities via pip-audit"
+          fi
+
+          echo "total=$TOTAL" >> $GITHUB_OUTPUT
+          echo "has_findings=$([ "$TOTAL" -gt 0 ] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+
+      - name: Upload Python dependency results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-dependency-results
+          path: |
+            safety-results.json
+            pip-audit-results.json
+            requirements.txt
+
+  javascript-dependencies:
+    name: Scan JavaScript Dependencies
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run npm audit
+        id: npm_audit
+        working-directory: ./ui
+        continue-on-error: true
+        run: |
+          npm audit --json > npm-audit-results.json || true
+
+      - name: Install and run Snyk
+        id: snyk
+        working-directory: ./ui
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: |
+          if [ -n "$SNYK_TOKEN" ]; then
+            npm install -g snyk
+            snyk auth $SNYK_TOKEN
+            snyk test --json > snyk-results.json || true
+          else
+            echo "SNYK_TOKEN not set, skipping Snyk scan"
+            echo "{\"vulnerabilities\": []}" > snyk-results.json
+          fi
+
+      - name: Process JavaScript dependency findings
+        id: js_findings
+        if: always()
+        working-directory: ./ui
+        run: |
+          TOTAL=0
+
+          # Count npm audit findings (high and critical only)
+          if [ -f npm-audit-results.json ]; then
+            AUDIT_HIGH=$(jq '.metadata.vulnerabilities.high // 0' npm-audit-results.json)
+            AUDIT_CRITICAL=$(jq '.metadata.vulnerabilities.critical // 0' npm-audit-results.json)
+            AUDIT_TOTAL=$((AUDIT_HIGH + AUDIT_CRITICAL))
+            TOTAL=$((TOTAL + AUDIT_TOTAL))
+            echo "Found $AUDIT_TOTAL high/critical vulnerabilities via npm audit"
+          fi
+
+          # Count Snyk findings
+          if [ -f snyk-results.json ]; then
+            SNYK_COUNT=$(jq '.vulnerabilities | length' snyk-results.json 2>/dev/null || echo "0")
+            TOTAL=$((TOTAL + SNYK_COUNT))
+            echo "Found $SNYK_COUNT vulnerabilities via Snyk"
+          fi
+
+          echo "total=$TOTAL" >> $GITHUB_OUTPUT
+          echo "has_findings=$([ "$TOTAL" -gt 0 ] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+
+      - name: Upload JavaScript dependency results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: javascript-dependency-results
+          path: ui/*-results.json
+
+  report:
+    name: Generate Dependency Report
+    runs-on: ubuntu-latest
+    needs: [python-dependencies, javascript-dependencies]
+    if: always()
+
+    steps:
+      - name: Download Python results
+        uses: actions/download-artifact@v4
+        with:
+          name: python-dependency-results
+          path: python-results
+
+      - name: Download JavaScript results
+        uses: actions/download-artifact@v4
+        with:
+          name: javascript-dependency-results
+          path: js-results
+
+      - name: Create comprehensive report
+        id: create_report
+        run: |
+          # Process Python results
+          PYTHON_TOTAL=0
+          PYTHON_HIGH=0
+
+          if [ -f python-results/safety-results.json ]; then
+            PYTHON_TOTAL=$(jq '.vulnerabilities | length' python-results/safety-results.json 2>/dev/null || echo "0")
+          fi
+
+          if [ -f python-results/pip-audit-results.json ]; then
+            PIP_AUDIT_TOTAL=$(jq '.vulnerabilities | length' python-results/pip-audit-results.json 2>/dev/null || echo "0")
+            PYTHON_TOTAL=$((PYTHON_TOTAL + PIP_AUDIT_TOTAL))
+          fi
+
+          # Process JavaScript results
+          JS_TOTAL=0
+          JS_HIGH=0
+
+          if [ -f js-results/npm-audit-results.json ]; then
+            JS_HIGH=$(jq '.metadata.vulnerabilities.high // 0' js-results/npm-audit-results.json)
+            JS_CRITICAL=$(jq '.metadata.vulnerabilities.critical // 0' js-results/npm-audit-results.json)
+            JS_TOTAL=$((JS_HIGH + JS_CRITICAL))
+          fi
+
+          TOTAL=$((PYTHON_TOTAL + JS_TOTAL))
+
+          echo "total=$TOTAL" >> $GITHUB_OUTPUT
+          echo "python_total=$PYTHON_TOTAL" >> $GITHUB_OUTPUT
+          echo "js_total=$JS_TOTAL" >> $GITHUB_OUTPUT
+          echo "has_findings=$([ "$TOTAL" -gt 0 ] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+
+      - name: Create issue for nightly scan
+        if: |
+          github.event_name == 'schedule' &&
+          steps.create_report.outputs.has_findings == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const today = new Date().toISOString().split('T')[0];
+            const pythonTotal = '${{ steps.create_report.outputs.python_total }}';
+            const jsTotal = '${{ steps.create_report.outputs.js_total }}';
+            const total = '${{ steps.create_report.outputs.total }}';
+
+            let body = `## 📦 Nightly Dependency Security Scan\n\n`;
+            body += `**Scan Date:** ${today}\n`;
+            body += `**Total Vulnerabilities:** ${total}\n\n`;
+            body += `### Summary by Technology\n\n`;
+            body += `- 🐍 Python Dependencies: ${pythonTotal} vulnerabilities\n`;
+            body += `- ⚛️  JavaScript Dependencies: ${jsTotal} vulnerabilities\n\n`;
+            body += `### Recommended Actions\n\n`;
+            body += `1. Review vulnerable dependencies in the dependency graph\n`;
+            body += `2. Update affected packages to patched versions\n`;
+            body += `3. If no patch available, consider alternative packages or mitigations\n\n`;
+            body += `### Resources\n\n`;
+            body += `- [Dependency Graph](${context.payload.repository.html_url}/network/dependencies)\n`;
+            body += `- [Security Advisories](${context.payload.repository.html_url}/security/advisories)\n`;
+            body += `- [Workflow Run](${context.payload.repository.html_url}/actions/runs/${context.runId})\n\n`;
+            body += `---\n`;
+            body += `*Automated nightly dependency scan*`;
+
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'security,dependencies,automated',
+              state: 'open'
+            });
+
+            const existingIssue = issues.find(issue =>
+              issue.title.includes('Dependency Security Scan') &&
+              issue.title.includes(today)
+            );
+
+            if (existingIssue) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existingIssue.number,
+                body: `### Updated Scan\n\n${body}`
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `📦 Dependency Security Scan - ${today} - ${total} vulnerabilities`,
+                body: body,
+                labels: ['security', 'dependencies', 'automated']
+              });
+            }
+
+      - name: Comment on PR
+        if: |
+          github.event_name == 'pull_request' &&
+          steps.create_report.outputs.has_findings == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pythonTotal = '${{ steps.create_report.outputs.python_total }}';
+            const jsTotal = '${{ steps.create_report.outputs.js_total }}';
+            const total = '${{ steps.create_report.outputs.total }}';
+
+            let comment = `## 📦 Dependency Security Scan\n\n`;
+            comment += `**Total Vulnerabilities:** ${total}\n\n`;
+            comment += `- Python: ${pythonTotal}\n`;
+            comment += `- JavaScript: ${jsTotal}\n\n`;
+
+            if (parseInt(total) > 0) {
+              comment += `⚠️  Please review and update vulnerable dependencies before merging.\n\n`;
+              comment += `Check the [workflow run](${context.payload.repository.html_url}/actions/runs/${context.runId}) for details.`;
+            }
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: comment
+            });
+
+      - name: Fail on critical vulnerabilities
+        if: |
+          github.event_name == 'pull_request' &&
+          steps.create_report.outputs.has_findings == 'true'
+        run: |
+          TOTAL=${{ steps.create_report.outputs.total }}
+          if [ "$TOTAL" -gt 5 ]; then
+            echo "::warning::Found $TOTAL dependency vulnerabilities. Consider updating before merge."
+          fi
