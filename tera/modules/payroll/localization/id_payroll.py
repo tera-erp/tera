@@ -2,7 +2,7 @@ from decimal import Decimal
 from .registry import payroll_registry, PayrollResult
 
 
-@payroll_registry.register("ID")
+@payroll_registry.register("ID")  # Maps to IDN internally
 class IndonesiaPayrollStrategy:
     """Indonesian payroll deduction rules (BPJS, PPh 21)."""
 

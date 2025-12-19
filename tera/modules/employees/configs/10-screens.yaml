@@ -8,17 +8,22 @@ screens:
     endpoint: /api/v1/employees/
     permissions: [employees.view]
     show_in_nav: true
+    create_screen: employee_create
     list_config:
       columns: 
         - employee_number
-        - user_id
-        - company_id
-        - employment_status
-        - employment_type
+        - first_name
+        - last_name
+        - email
         - department
         - position
+        - employment_status
+        - employment_type
       searchable_fields: 
         - employee_number
+        - first_name
+        - last_name
+        - email
         - department
         - position
       sortable: true
@@ -35,12 +40,27 @@ screens:
           label: Edit
           icon: Edit2
           action: edit
-        - id: delete
+        - id: deactivate
           label: Deactivate
           icon: UserX
-          action: delete
+          action: deactivate
           color: destructive
           confirm: true
+
+  employee_create:
+    title: Create Employee
+    description: Add a new employee to the system
+    path: /modules/employees/new
+    type: detail
+    endpoint: /api/v1/employees/
+    permissions: [employees.create]
+    show_in_nav: false
+    detail_config:
+      form: employee_form
+      show_metadata: false
+      back_button:
+        enabled: true
+        navigate_to: /modules/employees
 
   employee_detail:
     title: Employee Profile
@@ -51,7 +71,23 @@ screens:
     permissions: [employees.view]
     show_in_nav: false
     detail_config:
+      form: employee_form
       show_metadata: true
+      show_related: true
+      sidebar:
+        show_metadata: true
+        widgets:
+          - status_widget
+          - salary_widget
+          - contact_widget
       actions:
         - edit
-        - delete
+        - deactivate
+      related_records:
+        - label: Payslips
+          endpoint: /api/v1/payroll/employees/{id}/payslips
+          display_field: period_name
+        - label: Leave Requests
+          endpoint: /api/v1/payroll/employees/{id}/leave-requests
+          display_field: leave_type
+

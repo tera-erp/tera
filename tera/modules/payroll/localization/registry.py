@@ -1,8 +1,10 @@
-"""Payroll module localization registry scoped to the payroll module.
-Includes a default non-localized strategy for environments without country-specific rules.
+"""Payroll localization registry - migrated to use global localization system.
+
+This maintains backward compatibility while delegating to the global registry.
 """
 from typing import Protocol, Dict, Type, TypedDict
 from decimal import Decimal
+from tera.core.localization import localization_registry
 
 
 class PayrollResult(TypedDict):
@@ -19,29 +21,61 @@ class PayrollStrategy(Protocol):
 
 
 class PayrollRegistry:
-    _strategies: Dict[str, Type[PayrollStrategy]] = {}
+    """Legacy payroll registry - delegates to global localization registry."""
     _default_key = "DEFAULT"
 
     @classmethod
     def register(cls, country_code: str):
-        def decorator(strategy_class: Type[PayrollStrategy]):
-            cls._strategies[country_code] = strategy_class
-            return strategy_class
-        return decorator
+        """Decorator for registering payroll strategies.
+        
+        Now delegates to the global localization registry under 'payroll' domain.
+        """
+        # Map old 2-letter codes to 3-letter ISO codes if needed
+        code_map = {
+            "ID": "IDN",
+            "MY": "MYS", 
+            "SG": "SGP",
+        }
+        iso_code = code_map.get(country_code.upper(), country_code.upper())
+        
+        return localization_registry.register(iso_code, "payroll")
 
     @classmethod
     def get_strategy(cls, country_code: str | None) -> PayrollStrategy:
-        key = (country_code or cls._default_key).upper()
-        strategy = cls._strategies.get(key) or cls._strategies.get(cls._default_key)
-        if not strategy:
-            raise ValueError("No payroll localization strategies are registered")
-        return strategy()
+        """Get payroll strategy for a country.
+        
+        Args:
+            country_code: 2 or 3 letter country code (ID/IDN, MY/MYS, SG/SGP)
+        
+        Returns:
+            PayrollStrategy instance
+        """
+        if not country_code:
+            country_code = cls._default_key
+        
+        # Map old 2-letter codes to 3-letter ISO codes
+        code_map = {
+            "ID": "IDN",
+            "MY": "MYS",
+            "SG": "SGP",
+        }
+        iso_code = code_map.get(country_code.upper(), country_code.upper())
+        
+        # Try to get from global registry
+        handler = localization_registry.get(iso_code, "payroll")
+        if handler:
+            return handler
+        
+        # Fall back to default
+        handler = localization_registry.get_or_raise(cls._default_key, "payroll")
+        return handler
 
 
 payroll_registry = PayrollRegistry()
 
 
-@payroll_registry.register(PayrollRegistry._default_key)
+# Register default handler
+@localization_registry.register_default("payroll")
 class DefaultPayrollStrategy:
     """Fallback when no localization is required."""
 

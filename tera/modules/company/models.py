@@ -18,7 +18,7 @@ class Company(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), unique=True, nullable=False, index=True)
     legal_name = Column(String(255), nullable=False)
-    country_code = Column(String(2), nullable=False)
+    country_code = Column(String(3), nullable=False)
     currency_code = Column(String(3), nullable=False, default="USD")
     timezone = Column(String(50), nullable=False, default="UTC")
     status = Column(SQLEnum(CompanyStatus), nullable=False, default=CompanyStatus.ACTIVE)

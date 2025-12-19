@@ -58,17 +58,17 @@ forms:
         label: Country
         required: true
         options:
-          - value: US
+          - value: USA
             label: United States
-          - value: SG
+          - value: SGP
             label: Singapore
-          - value: ID
+          - value: IDN
             label: Indonesia
-          - value: GB
+          - value: GBR
             label: United Kingdom
-          - value: DE
+          - value: DEU
             label: Germany
-        default: US
+        default: USA
         size: half
 
       email:

@@ -1,0 +1,465 @@
+# Employee forms configuration
+#
+# Dynamic Fields:
+# - salary_currency: Fetched from company settings (/api/v1/companies/current)
+# - country: Defaults to company country_code
+# - nationality: List from /api/v1/reference/countries
+# - manager_id: List of employees from /api/v1/employees/
+# - ptkp_status: Only shown when company country is Indonesia (IDN)
+#
+# The UIFactory will automatically fetch company context and populate defaults
+# based on the selected company in the user's session.
+#
+forms:
+  employee_form:
+    title: Create Employee Profile
+    description: Fill in the employee information below
+    edit_title: Edit Employee Profile
+    edit_description: Update employee information
+    submit_label: Create Employee
+    edit_submit_label: Save Changes
+    cancel_label: Cancel
+    back_button:
+      enabled: true
+      label: Back to Employees
+      navigate_to: /modules/employees
+    
+    layout:
+      type: grid
+      columns: 2
+      gaps: medium
+      sections:
+        - title: Basic Information
+          icon: User
+          fields:
+            - employee_number
+            - first_name
+            - last_name
+            - email
+            - mobile_phone
+            - date_of_birth
+            - gender
+            - marital_status
+        
+        - title: Employment Details
+          icon: Briefcase
+          fields:
+            - department
+            - position
+            - hire_date
+            - employment_type
+            - employment_status
+            - manager_id
+        
+        - title: Compensation
+          icon: DollarSign
+          fields:
+            - base_salary
+            - salary_currency
+            - salary_type
+            - bank_account_number
+            - bank_account_holder
+            - bank_name
+        
+        - title: Contact & Address
+          icon: MapPin
+          fields:
+            - personal_email
+            - emergency_contact_name
+            - emergency_contact_phone
+            - address_line1
+            - address_line2
+            - city
+            - state_province
+            - postal_code
+            - country
+    
+    fields:
+      employee_number:
+        type: text
+        label: Employee Number
+        required: false
+        readonly: true
+        help_text: Auto-generated if left empty
+        size: half
+      
+      first_name:
+        type: text
+        label: First Name
+        required: true
+        size: half
+        placeholder: John
+      
+      last_name:
+        type: text
+        label: Last Name
+        required: true
+        size: half
+        placeholder: Doe
+      
+      email:
+        type: email
+        label: Work Email
+        required: true
+        size: half
+        placeholder: john.doe@company.com
+        help_text: Primary work email address
+      
+      mobile_phone:
+        type: text
+        label: Mobile Phone
+        required: false
+        size: half
+        placeholder: "+1234567890"
+      
+      date_of_birth:
+        type: date
+        label: Date of Birth
+        required: false
+        size: half
+      
+      gender:
+        type: select
+        label: Gender
+        required: false
+        size: half
+        options:
+          - value: male
+            label: Male
+          - value: female
+            label: Female
+          - value: other
+            label: Other
+      
+      marital_status:
+        type: select
+        label: Marital Status
+        required: false
+        size: half
+        options:
+          - value: single
+            label: Single
+          - value: married
+            label: Married
+          - value: divorced
+            label: Divorced
+          - value: widowed
+            label: Widowed
+      
+      nationality:
+        type: select
+        label: Nationality
+        required: false
+        size: half
+        endpoint: /api/v1/reference/countries
+        display_field: name
+        value_field: code
+        searchable: true
+        clearable: true
+      
+      national_id:
+        type: text
+        label: National ID
+        required: false
+        size: half
+        help_text: SSN, NRIC, NIK, etc.
+      
+      passport_number:
+        type: text
+        label: Passport Number
+        required: false
+        size: half
+      
+      ptkp_status:
+        type: select
+        label: PTKP Status (Indonesian Tax)
+        required: false
+        size: half
+        help_text: Only applicable for Indonesian employees
+        hidden_if: "company.country_code !== 'IDN'"
+        options:
+          - value: TK/0
+            label: TK/0 - Single, no dependents
+          - value: TK/1
+            label: TK/1 - Single, 1 dependent
+          - value: TK/2
+            label: TK/2 - Single, 2 dependents
+          - value: TK/3
+            label: TK/3 - Single, 3 dependents
+          - value: K/0
+            label: K/0 - Married, no dependents
+          - value: K/1
+            label: K/1 - Married, 1 dependent
+          - value: K/2
+            label: K/2 - Married, 2 dependents
+          - value: K/3
+            label: K/3 - Married, 3 dependents
+      
+      department:
+        type: text
+        label: Department
+        required: true
+        size: half
+        placeholder: Engineering
+      
+      position:
+        type: text
+        label: Position/Title
+        required: true
+        size: half
+        placeholder: Software Engineer
+      
+      hire_date:
+        type: date
+        label: Hire Date
+        required: true
+        size: half
+      
+      employment_type:
+        type: select
+        label: Employment Type
+        required: true
+        size: half
+        default: full_time
+        options:
+          - value: full_time
+            label: Full Time
+          - value: part_time
+            label: Part Time
+          - value: contract
+            label: Contract
+          - value: intern
+            label: Intern
+          - value: consultant
+            label: Consultant
+          - value: temporary
+            label: Temporary
+      
+      employment_status:
+        type: select
+        label: Employment Status
+        required: true
+        size: half
+        default: active
+        options:
+          - value: active
+            label: Active
+          - value: on_leave
+            label: On Leave
+          - value: probation
+            label: Probation
+          - value: terminated
+            label: Terminated
+          - value: resigned
+            label: Resigned
+          - value: suspended
+            label: Suspended
+      
+      manager_id:
+        type: select
+        label: Manager
+        required: false
+        size: half
+        endpoint: /api/v1/employees/
+        display_field: full_name
+        value_field: id
+        searchable: true
+        clearable: true
+        help_text: Select the direct manager for this employee
+      
+      base_salary:
+        type: decimal
+        label: Base Salary
+        required: false
+        size: half
+        min: 0
+        placeholder: "50000.00"
+        help_text: Employee's base salary amount
+      
+      salary_currency:
+        type: select
+        label: Currency
+        required: false
+        size: half
+        endpoint: /api/v1/companies/current
+        display_field: currency_code
+        value_field: currency_code
+        help_text: Defaults to company currency
+        clearable: false
+      
+      salary_type:
+        type: select
+        label: Salary Type
+        required: false
+        size: half
+        default: monthly
+        options:
+          - value: hourly
+            label: Hourly
+          - value: daily
+            label: Daily
+          - value: weekly
+            label: Weekly
+          - value: biweekly
+            label: Bi-weekly
+          - value: monthly
+            label: Monthly
+          - value: yearly
+            label: Yearly
+      
+      bank_account_number:
+        type: text
+        label: Bank Account Number
+        required: false
+        size: half
+      
+      bank_account_holder:
+        type: text
+        label: Account Holder Name
+        required: false
+        size: half
+      
+      bank_name:
+        type: text
+        label: Bank Name
+        required: false
+        size: half
+      
+      personal_email:
+        type: email
+        label: Personal Email
+        required: false
+        size: half
+      
+      emergency_contact_name:
+        type: text
+        label: Emergency Contact Name
+        required: false
+        size: half
+      
+      emergency_contact_phone:
+        type: text
+        label: Emergency Contact Phone
+        required: false
+        size: half
+      
+      address_line1:
+        type: text
+        label: Address Line 1
+        required: false
+        size: full
+      
+      address_line2:
+        type: text
+        label: Address Line 2
+        required: false
+        size: full
+      
+      city:
+        type: text
+        label: City
+        required: false
+        size: half
+      
+      state_province:
+        type: text
+        label: State/Province
+        required: false
+        size: half
+      
+      postal_code:
+        type: text
+        label: Postal Code
+        required: false
+        size: half
+      
+      country:
+        type: select
+        label: Country
+        required: false
+        size: half
+        endpoint: /api/v1/companies/current
+        display_field: country_code
+        value_field: country_code
+        help_text: Defaults to company country
+        clearable: false
+        options:
+          - value: US
+            label: United States
+          - value: ID
+            label: Indonesia
+          - value: SG
+            label: Singapore
+          - value: MY
+            label: Malaysia
+          - value: GB
+            label: United Kingdom
+          - value: DE
+            label: Germany
+          - value: FR
+            label: France
+          - value: JP
+            label: Japan
+          - value: CN
+            label: China
+          - value: IN
+            label: India
+
+      tax_id:
+        type: text
+        label: Tax ID / SSN
+        required: false
+        size: half
+
+      tax_file_number:
+        type: text
+        label: Tax File Number
+        required: false
+        size: half
+
+      status:
+        type: select
+        label: Employment Status
+        required: true
+        size: half
+        default: active
+        options:
+          - value: active
+            label: Active
+          - value: probation
+            label: Probation
+          - value: on_leave
+            label: On Leave
+          - value: suspended
+            label: Suspended
+          - value: terminated
+            label: Terminated
+          - value: resigned
+            label: Resigned
+
+    # layout:
+    #   type: tabs
+    #   sections:
+    #     - title: Personal Information
+    #       description: Basic employee details
+    #       icon: User
+    #       fields: [employee_number, first_name, last_name, email, mobile_phone, date_of_birth]
+    #     - title: Employment
+    #       description: Job and department information
+    #       icon: Briefcase
+    #       fields: [department, position, hire_date, employment_type, status]
+    #     - title: Compensation
+    #       description: Salary and payment details
+    #       icon: DollarSign
+    #       fields: [base_salary, salary_currency, bank_account_number, bank_account_holder, bank_name]
+    #     - title: Tax Information
+    #       description: Tax and identification details
+    #       icon: FileText
+    #       fields: [tax_id, tax_file_number]
+
+    # back_button:
+    #   enabled: true
+    #   label: Back to Employees
+    #   navigate_to: /modules/payroll/employees
+    # submit_label: Create Employee
+    # cancel_label: Cancel

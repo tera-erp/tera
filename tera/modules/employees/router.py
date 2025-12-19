@@ -12,7 +12,7 @@ from .schema import (
 )
 from datetime import datetime
 
-router = APIRouter(prefix="/employees", tags=["employees"])
+router = APIRouter(prefix="", tags=["employees"])
 
 @router.post("/", response_model=EmployeeProfileResponse, status_code=status.HTTP_201_CREATED)
 async def create_employee_profile(
@@ -174,3 +174,51 @@ async def delete_employee(
     await db.commit()
     
     return None
+
+
+async def set_employee_status(
+    employee_id: int,
+    new_status: str,
+    db: AsyncSession
+) -> EmployeeProfile:
+    """Helper function to set employee status"""
+    result = await db.execute(
+        select(EmployeeProfile).where(EmployeeProfile.id == employee_id)
+    )
+    employee = result.scalar_one_or_none()
+    
+    if not employee:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Employee profile not found"
+        )
+    
+    employee.employment_status = new_status
+    employee.updated_at = datetime.utcnow()
+    await db.commit()
+    await db.refresh(employee)
+    
+    return employee
+class EmployeeStatusChangeResponse(BaseModel):
+    success: bool
+    message: str
+    status: str
+
+
+@router.post("/{employee_id}/deactivate", response_model=EmployeeStatusChangeResponse)
+async def deactivate_employee(employee_id: int, db: AsyncSession = Depends(get_db)) -> EmployeeStatusChangeResponse:
+    employee = await set_employee_status(employee_id, "inactive", db)
+    return EmployeeStatusChangeResponse(success=True, message="Employee deactivated", status=employee.employment_status.value)
+
+
+@router.post("/{employee_id}/reactivate", response_model=EmployeeStatusChangeResponse)
+async def reactivate_employee(employee_id: int, db: AsyncSession = Depends(get_db)) -> EmployeeStatusChangeResponse:
+    employee = await set_employee_status(employee_id, "active", db)
+    return EmployeeStatusChangeResponse(success=True, message="Employee reactivated", status=employee.employment_status.value)
+
+
+@router.post("/{employee_id}/terminate", response_model=EmployeeStatusChangeResponse)
+async def terminate_employee(employee_id: int, db: AsyncSession = Depends(get_db)) -> EmployeeStatusChangeResponse:
+    employee = await set_employee_status(employee_id, "terminated", db)
+    return EmployeeStatusChangeResponse(success=True, message="Employee terminated", status=employee.employment_status.value)
+
