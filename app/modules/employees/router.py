@@ -3,8 +3,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.core.database import get_db
-from app.models import EmployeeProfile, User
-from app.schemas import (
+from app.modules.users.models import User
+from .models import EmployeeProfile
+from .schema import (
     EmployeeProfileCreate,
     EmployeeProfileUpdate,
     EmployeeProfileResponse

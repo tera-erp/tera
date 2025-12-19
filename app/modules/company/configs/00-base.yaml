@@ -1,0 +1,22 @@
+module:
+  id: company
+  name: Company
+  description: Core company management module
+configurables:
+  default_currency:
+    label: Default Currency
+    type: select
+    options:
+      - USD
+      - EUR
+      - GBP
+    default: USD
+  default_timezone:
+    label: Default Timezone
+    type: text
+    default: UTC
+  allow_multi_branch:
+    label: Allow multiple branches
+    type: boolean
+    default: false
+screens: {}

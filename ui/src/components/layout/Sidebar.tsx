@@ -138,7 +138,7 @@ const Sidebar: React.FC = () => {
                         return (
                           <NavLink
                             key={screenId}
-                            to={`/modules/${module.module.id}/${screenId}`}
+                            to={screen.path}
                             className={({ isActive }) =>
                               cn(
                                 "flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors",

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -28,12 +28,18 @@ import {
 import { useCompany } from '@/context/CompanyContext';
 import { useAuth } from '@/context/AuthContext';
 import { localizationConfigs } from '@/config/localization';
+import { ModuleFactory } from '@/modules/ModuleFactory';
+import { ModuleMetadata, ModuleConfig } from '@/modules/types';
 
 const Settings = () => {
   const { activeCompany, activeLocalization } = useCompany();
   const { user } = useAuth();
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [activeTab, setActiveTab] = useState('company');
+  const [modules, setModules] = useState<ModuleMetadata[]>([]);
+  const [modulesLoading, setModulesLoading] = useState(false);
+  const [moduleMessages, setModuleMessages] = useState<Record<string, string>>({});
+  const [editableConfigs, setEditableConfigs] = useState<Record<string, Record<string, unknown>>>({});
 
   // Check if user has admin access based on role from auth context
   const hasAdminAccess = user && (user.role === 'hr_admin' || user.role === 'it_admin');
@@ -61,19 +67,138 @@ const Settings = () => {
     eInvoiceProvider: activeLocalization.eInvoice.provider,
   });
 
-  const [payrollSettings, setPayrollSettings] = useState({
-    payPeriod: 'monthly',
-    paymentDay: '25',
-    autoCalculateStatutory: true,
-    enableOvertimeTracking: true,
-    defaultWorkingHours: '8',
-  });
+  
 
   const handleSaveSettings = () => {
     // In real app, this would call an API
-    console.log('Saving settings...', { companySettings, localizationSettings, payrollSettings });
+    console.log('Saving settings...', { companySettings, localizationSettings });
     setHasUnsavedChanges(false);
     // Show success message
+  };
+
+  // Load modules and find those exposing `configurables`
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      setModulesLoading(true);
+      try {
+        // Try to get already-registered modules first
+        let regs: ModuleMetadata[] = ModuleFactory.getAllModules();
+        if (!regs || regs.length === 0) {
+          // Fallback: fetch from API via factory
+          regs = await ModuleFactory.loadModules();
+        }
+
+        if (!mounted) return;
+
+        // Only keep modules that declare `configurables` in their config
+        const modsWithConfig = regs
+          .map((m) => m.config || (m as unknown as ModuleConfig))
+          .filter((c: ModuleConfig) => c && (Boolean((c as unknown as Record<string, unknown>).configurables) || Object.keys(c).includes('configurables')))
+          .map((c: ModuleConfig) => ({ module: c.module, config: c }));
+
+        setModules(modsWithConfig);
+
+        // Pre-fill editableConfigs with current values
+        const initial: Record<string, Record<string, unknown>> = {};
+        modsWithConfig.forEach((m) => {
+          const cfg = (m.config as unknown as Record<string, unknown>).configurables as unknown;
+          if (!cfg) return;
+          // configurables may be array or object
+          if (Array.isArray(cfg)) {
+            initial[m.module.id] = {};
+            (cfg as Array<Record<string, unknown>>).forEach((item) => {
+              const key = (item['key'] as string) || (item['id'] as string);
+              const val = (item['value'] ?? item['default']) as unknown ?? '';
+              initial[m.module.id][key] = val;
+            });
+          } else {
+            initial[m.module.id] = {};
+            Object.entries(cfg as Record<string, Record<string, unknown>>).forEach(([k, v]) => {
+              const vv = v as Record<string, unknown>;
+              const val = (vv.value ?? vv.default) as unknown ?? '';
+              initial[m.module.id][k] = val;
+            });
+          }
+        });
+        setEditableConfigs(initial);
+        // Fetch persisted values for each module and merge
+        for (const m of modsWithConfig) {
+          const moduleId = m.module.id;
+          try {
+            const resp = await fetch(`/api/v1/modules/${moduleId}/configurables`, {
+              headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
+            });
+            if (!resp.ok) continue;
+            const body = await resp.json();
+            const values = body?.values || {};
+            setEditableConfigs((prev) => ({ ...prev, [moduleId]: { ...(prev[moduleId] || {}), ...values } }));
+          } catch (e) {
+            // ignore per-module errors
+            console.debug('Failed to fetch persisted configurables for', m.module.id, e);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load modules for settings', err);
+      } finally {
+        setModulesLoading(false);
+      }
+    };
+
+    load();
+    return () => { mounted = false; };
+  }, []);
+
+  const setModuleMessage = (moduleId: string, msg: string) => {
+    setModuleMessages((prev) => ({ ...prev, [moduleId]: msg }));
+  };
+
+  const handleSaveModuleConfigurables = async (moduleId: string) => {
+    const payload = editableConfigs[moduleId] || {};
+    setModuleMessage(moduleId, 'Saving...');
+    try {
+      const res = await fetch(`/api/v1/modules/${moduleId}/configurables`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+        },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const body = await res.text().catch(() => '');
+        throw new Error(body || `Status ${res.status}`);
+      }
+      setModuleMessage(moduleId, 'Saved successfully');
+    } catch (err) {
+      console.error('Save module config failed', err);
+      const msg = err instanceof Error ? err.message : String(err);
+      setModuleMessage(moduleId, `Save failed: ${msg}`);
+    }
+    setTimeout(() => setModuleMessage(moduleId, ''), 3000);
+  };
+
+  const handleFixModule = async (moduleId: string) => {
+    setModuleMessage(moduleId, 'Running fix...');
+    try {
+      const res = await fetch(`/api/v1/modules/${moduleId}/fix`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!res.ok) {
+        const body = await res.text().catch(() => '');
+        throw new Error(body || `Status ${res.status}`);
+      }
+      setModuleMessage(moduleId, 'Fix completed');
+    } catch (err) {
+      console.error('Module fix failed', err);
+      const msg = err instanceof Error ? err.message : String(err);
+      setModuleMessage(moduleId, `Fix failed: ${msg}`);
+    }
+    setTimeout(() => setModuleMessage(moduleId, ''), 5000);
   };
 
   if (!hasAdminAccess) {
@@ -164,11 +289,16 @@ const Settings = () => {
 
       {/* Settings Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 lg:w-[600px]">
+        <TabsList className="flex gap-2 flex-wrap">
           <TabsTrigger value="company">Company</TabsTrigger>
           <TabsTrigger value="localization">Localization</TabsTrigger>
-          <TabsTrigger value="payroll">Payroll</TabsTrigger>
-          <TabsTrigger value="users">Users</TabsTrigger>
+          
+          {/* Module-specific settings tabs (for modules that expose `configurables`) */}
+          {modules.map((m) => (
+            <TabsTrigger key={m.module.id} value={`module:${m.module.id}`}>
+              {m.module.name}
+            </TabsTrigger>
+          ))}
         </TabsList>
 
         {/* Company Info Tab */}
@@ -450,170 +580,114 @@ const Settings = () => {
           </Card>
         </TabsContent>
 
-        {/* Payroll Tab */}
-        <TabsContent value="payroll" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5 text-muted-foreground" />
-                <CardTitle>Payroll Settings</CardTitle>
-              </div>
-              <CardDescription>
-                Configure payroll processing and statutory calculations
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="payPeriod">Pay Period</Label>
-                  <Select
-                    value={payrollSettings.payPeriod}
-                    onValueChange={(value) => {
-                      setPayrollSettings({ ...payrollSettings, payPeriod: value });
-                      setHasUnsavedChanges(true);
-                    }}
-                  >
-                    <SelectTrigger id="payPeriod">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="weekly">Weekly</SelectItem>
-                      <SelectItem value="bi-weekly">Bi-weekly</SelectItem>
-                      <SelectItem value="monthly">Monthly</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+        
 
-                <div>
-                  <Label htmlFor="paymentDay">Payment Day of Month</Label>
-                  <Select
-                    value={payrollSettings.paymentDay}
-                    onValueChange={(value) => {
-                      setPayrollSettings({ ...payrollSettings, paymentDay: value });
-                      setHasUnsavedChanges(true);
-                    }}
-                  >
-                    <SelectTrigger id="paymentDay">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[...Array(28)].map((_, i) => (
-                        <SelectItem key={i + 1} value={String(i + 1)}>
-                          {i + 1}
-                        </SelectItem>
-                      ))}
-                      <SelectItem value="last">Last Day of Month</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+        {/* Module-specific Tabs (configurables) */}
+        {modules.map((m) => {
+          const moduleId = m.module.id;
+          const cfg = (m.config as unknown as Record<string, unknown>).configurables as unknown;
+          const values = editableConfigs[moduleId] || {};
 
-                <div>
-                  <Label htmlFor="workingHours">Default Working Hours/Day</Label>
-                  <Input
-                    id="workingHours"
-                    type="number"
-                    value={payrollSettings.defaultWorkingHours}
-                    onChange={(e) => {
-                      setPayrollSettings({ ...payrollSettings, defaultWorkingHours: e.target.value });
-                      setHasUnsavedChanges(true);
-                    }}
-                  />
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-4">
-                <h4 className="font-semibold">Statutory Calculations</h4>
-                
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between py-2">
-                    <div>
-                      <p className="font-medium">Auto-calculate Statutory Deductions</p>
-                      <p className="text-sm text-muted-foreground">
-                        Automatically apply {activeLocalization.name} statutory rates
-                      </p>
-                    </div>
-                    <Switch
-                      checked={payrollSettings.autoCalculateStatutory}
-                      onCheckedChange={(checked) => {
-                        setPayrollSettings({ ...payrollSettings, autoCalculateStatutory: checked });
-                        setHasUnsavedChanges(true);
-                      }}
-                    />
+          return (
+            <TabsContent key={moduleId} value={`module:${moduleId}`} className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-muted-foreground" />
+                    <CardTitle>{m.module.name} Settings</CardTitle>
                   </div>
+                  <CardDescription>
+                    Module: {m.module.id} • version {m.module.version}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {modulesLoading && <p className="text-sm text-muted-foreground">Loading...</p>}
 
-                  <div className="flex items-center justify-between py-2">
-                    <div>
-                      <p className="font-medium">Enable Overtime Tracking</p>
-                      <p className="text-sm text-muted-foreground">
-                        Track and calculate overtime hours
-                      </p>
+                  {!cfg && <p className="text-sm text-muted-foreground">No configurables exposed by this module.</p>}
+
+                  {cfg && Array.isArray(cfg) && (
+                    <div className="space-y-4">
+                      {(cfg as Array<Record<string, unknown>>).map((item) => {
+                        const key = (item['key'] as string) || (item['id'] as string);
+                        const label = (item['label'] as string) || key;
+                        const type = (item['type'] as string) || 'text';
+                        const desc = (item['description'] as string) || (item['help_text'] as string) || '';
+                        const val = values[key] as unknown;
+                        return (
+                          <div key={key}>
+                            <Label>{label}</Label>
+                            {type === 'boolean' ? (
+                              <div className="flex items-center justify-between">
+                                <p className="text-sm text-muted-foreground">{desc}</p>
+                                <Switch
+                                  checked={Boolean(val)}
+                                  onCheckedChange={(checked) => {
+                                    setEditableConfigs((prev) => ({ ...prev, [moduleId]: { ...(prev[moduleId] || {}), [key]: checked } }));
+                                  }}
+                                />
+                              </div>
+                            ) : (
+                              <Input
+                                value={val ?? ''}
+                                onChange={(e) => setEditableConfigs((prev) => ({ ...prev, [moduleId]: { ...(prev[moduleId] || {}), [key]: e.target.value } }))}
+                              />
+                            )}
+                            {desc && <p className="text-xs text-muted-foreground mt-1">{desc}</p>}
+                          </div>
+                        );
+                      })}
                     </div>
-                    <Switch
-                      checked={payrollSettings.enableOvertimeTracking}
-                      onCheckedChange={(checked) => {
-                        setPayrollSettings({ ...payrollSettings, enableOvertimeTracking: checked });
-                        setHasUnsavedChanges(true);
-                      }}
-                    />
+                  )}
+
+                  {cfg && !Array.isArray(cfg) && (
+                    <div className="space-y-4">
+                      {Object.entries(cfg as Record<string, Record<string, unknown>>).map(([k, v]) => {
+                        const label = (v && ((v.label as string) || (v.title as string))) || k;
+                        const type = (v && (v.type as string)) || 'text';
+                        const desc = (v && ((v.description as string) || (v.help_text as string))) || '';
+                        const val = values[k] as unknown;
+                        return (
+                          <div key={k}>
+                            <Label>{label}</Label>
+                            {type === 'boolean' ? (
+                              <div className="flex items-center justify-between">
+                                <p className="text-sm text-muted-foreground">{desc}</p>
+                                <Switch
+                                  checked={Boolean(val)}
+                                  onCheckedChange={(checked) => setEditableConfigs((prev) => ({ ...prev, [moduleId]: { ...(prev[moduleId] || {}), [k]: checked } }))}
+                                />
+                              </div>
+                            ) : (
+                              <Input
+                                value={val ?? ''}
+                                onChange={(e) => setEditableConfigs((prev) => ({ ...prev, [moduleId]: { ...(prev[moduleId] || {}), [k]: e.target.value } }))}
+                              />
+                            )}
+                            {desc && <p className="text-xs text-muted-foreground mt-1">{desc}</p>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-3 mt-4">
+                    <Button onClick={() => handleSaveModuleConfigurables(moduleId)}>
+                      <Save className="mr-2 h-4 w-4" />
+                      Save
+                    </Button>
+                    <Button variant="outline" onClick={() => handleFixModule(moduleId)}>
+                      <AlertTriangle className="mr-2 h-4 w-4" />
+                      Fix Module Schema
+                    </Button>
+                    {moduleMessages[moduleId] && (
+                      <span className="text-sm text-muted-foreground">{moduleMessages[moduleId]}</span>
+                    )}
                   </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-4">
-                <h4 className="font-semibold">Current Statutory Rates</h4>
-                <div className="space-y-2">
-                  {activeLocalization.payroll.map((fund) => (
-                    <div
-                      key={fund.fund}
-                      className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 px-4 py-3"
-                    >
-                      <span className="font-medium">{fund.fund}</span>
-                      <div className="flex items-center gap-4 text-sm">
-                        <span className="text-muted-foreground">
-                          Employer: <span className="font-semibold text-foreground">{fund.employerRate}%</span>
-                        </span>
-                        <span className="text-muted-foreground">
-                          Employee: <span className="font-semibold text-foreground">{fund.employeeRate}%</span>
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  * Rates are automatically updated based on official government regulations
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Users Tab */}
-        <TabsContent value="users" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-muted-foreground" />
-                <CardTitle>User Management</CardTitle>
-              </div>
-              <CardDescription>
-                Manage user access and permissions for this company
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <Users className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">User Management Coming Soon</h3>
-                <p className="text-sm text-muted-foreground max-w-md">
-                  User role management, permissions, and access control will be available in the next release.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          );
+        })}
       </Tabs>
 
       {/* Save Button (Fixed at bottom on mobile) */}

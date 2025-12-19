@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
-from app.models.user import UserRole, UserStatus
+from app.modules.users.models import UserRole, UserStatus
 
 # Base schema with common fields
 class UserBase(BaseModel):
@@ -76,5 +76,5 @@ class SetupStatus(BaseModel):
     admin_exists: bool
 
 # Import for forward reference
-from app.schemas.employee import EmployeeProfileResponse
+from app.modules.employees.schema import EmployeeProfileResponse
 UserWithProfile.model_rebuild()

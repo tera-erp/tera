@@ -3,8 +3,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.core.database import get_db
-from app.models import Company
-from app.schemas import (
+from .models import Company
+from .schema import (
     CompanyCreate,
     CompanyUpdate,
     CompanyResponse,

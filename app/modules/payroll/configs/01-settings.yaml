@@ -1,0 +1,41 @@
+configurables:
+  pay_period:
+    label: Pay Period
+    type: select
+    description: Frequency of payroll runs
+    default: monthly
+    options:
+      - { value: weekly, label: Weekly }
+      - { value: bi-weekly, label: Bi-weekly }
+      - { value: monthly, label: Monthly }
+
+  payment_day:
+    label: Payment Day of Month
+    type: number
+    description: Day of month to pay employees (1-31 or 'last')
+    default: 25
+
+  default_working_hours:
+    label: Default Working Hours per Day
+    type: number
+    description: Default expected working hours per day
+    default: 8
+
+  auto_calculate_statutory:
+    label: Auto-calculate Statutory Deductions
+    type: boolean
+    description: Automatically apply statutory contribution rates for the active localization
+    default: true
+
+  enable_overtime_tracking:
+    label: Enable Overtime Tracking
+    type: boolean
+    description: Track overtime hours and calculate overtime pay
+    default: true
+
+  statutory_rates_info:
+    label: Statutory Rates Info
+    type: text
+    description: |-
+      Read-only summary of statutory payroll funds and rates is available in the Payroll module. These values are managed by localization packs and updated automatically.
+    default: ""

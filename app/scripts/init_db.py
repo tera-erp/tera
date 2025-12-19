@@ -1,18 +1,35 @@
 """
 Database initialization script
 
-This script creates all database tables.
-No mock data is seeded - users must create admin account and companies via the web interface.
+This script creates all database tables dynamically from Base.metadata.
+All models are auto-discovered by importing app/modules/core/models which
+recursively imports all module model files.
+
 Run with: python -m app.scripts.init_db
 """
 import asyncio
 from app.core.database import engine, Base
-from app.models import User, Company, EmployeeProfile  # Import all models
+# Import all models to register them with Base.metadata
+# app/modules/core/models.py imports all module-specific models
+from app.modules.core.models import (  # noqa: F401
+    ModuleSetting,
+    Company,
+    User,
+    EmployeeProfile,
+)
+from app.modules.finance.models import Partner, Invoice, InvoiceLine, Product  # noqa: F401
+from app.modules.payroll.models import PayrollRun, Payslip  # noqa: F401
 
 
 async def init_db():
-    """Create all database tables"""
-    print("Creating database tables...")
+    """Create all database tables from Base.metadata"""
+    print("Discovering registered models from Base.metadata...")
+    # List all tables that will be created
+    table_names = sorted(Base.metadata.tables.keys())
+    for table_name in table_names:
+        print(f"  - {table_name}")
+
+    print(f"\nCreating {len(table_names)} database tables...")
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     print("✓ Database tables created successfully!")

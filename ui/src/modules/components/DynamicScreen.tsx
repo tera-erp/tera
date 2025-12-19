@@ -83,6 +83,13 @@ export const DynamicScreen: React.FC<DynamicScreenProps> = ({ moduleId, screenId
     }
   );
 
+  // Helper to resolve screen paths
+  const resolvePath = (targetScreenId: string, id?: string) => {
+    const target = moduleConfig?.screens?.[targetScreenId];
+    if (!target?.path) return `/modules/${moduleId}`;
+    return id ? target.path.replace('{id}', id) : target.path;
+  };
+
   // Edit/Create mutation
   const editMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -144,8 +151,8 @@ export const DynamicScreen: React.FC<DynamicScreenProps> = ({ moduleId, screenId
     onSuccess: (response) => {
       setEditMode(false);
       if (isCreating) {
-        // Navigate to the created record
-        navigate(`/modules/${moduleId}/${screenId}/${response.id}`);
+        // Navigate to the created record using declarative path
+        navigate(resolvePath(screenId, String(response.id)));
       }
     },
   });
@@ -165,7 +172,7 @@ export const DynamicScreen: React.FC<DynamicScreenProps> = ({ moduleId, screenId
       return response.json();
     },
     onSuccess: () => {
-      navigate(`/modules/${moduleId}/${screenId}`);
+      navigate(resolvePath(screenId));
     },
   });
 
@@ -178,8 +185,12 @@ export const DynamicScreen: React.FC<DynamicScreenProps> = ({ moduleId, screenId
           data={listData}
           loading={listLoading}
           error={listError instanceof Error ? listError.message : undefined}
-          onNew={() => navigate(`/modules/${moduleId}/${screenId}/new`)}
-          onRow={(record) => navigate(`/modules/${moduleId}/${screenId}/${record.id}`)}
+          onNew={() => {
+            const createTargetId = screenConfig.create_screen || screenId;
+            const targetPath = resolvePath(createTargetId, 'new');
+            navigate(targetPath);
+          }}
+          onRow={(record) => navigate(resolvePath(screenId, String(record.id)))}
         />
       );
 
@@ -197,7 +208,7 @@ export const DynamicScreen: React.FC<DynamicScreenProps> = ({ moduleId, screenId
           loading={detailLoading && !isCreating}
           error={detailError instanceof Error ? detailError.message : undefined}
           isCreating={isCreating}
-          onBack={() => navigate(`/modules/${moduleId}/${screenId}`)}
+          onBack={() => navigate(resolvePath(screenId))}
           onEdit={editMutation.mutate}
           onDelete={deleteMutation.mutate}
           editMode={editMode}
@@ -211,7 +222,7 @@ export const DynamicScreen: React.FC<DynamicScreenProps> = ({ moduleId, screenId
           config={screenConfig as any}
           initialData={detailData}
           onSubmit={editMutation.mutate}
-          onCancel={() => navigate(`/modules/${moduleId}/${screenId}`)}
+          onCancel={() => navigate(resolvePath(screenId))}
           loading={editMutation.isPending}
           readOnly={false}
         />

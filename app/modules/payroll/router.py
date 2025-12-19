@@ -12,9 +12,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from app.core.database import get_db
-from app.models.employee import EmployeeProfile, EmploymentStatus, EmploymentType
-from app.models.company import Company
-from app.models.user import User
+from app.modules.employees.models import EmployeeProfile, EmploymentStatus, EmploymentType
+from app.modules.company.models import Company
+from app.modules.users.models import User
 from app.modules.payroll.models import PayrollRun as PayrollRunModel, Payslip as PayslipModel
 from app.modules.payroll.localization import payroll_registry
 from app.modules.core.document_engine import DocumentEngine, DocumentFormat
@@ -264,7 +264,7 @@ async def create_employee(employee_data: EmployeeCreate, db: AsyncSession = Depe
         first_name=employee_data.first_name,
         last_name=employee_data.last_name,
         company_id=employee_data.company_id,
-        hashed_password="temporary_hash_to_be_reset",  # Should be reset on first login
+        hashed_password="temporary_hash_to_be_reset",  #! Should be reset on first login
         is_verified=False,
     )
     db.add(user)

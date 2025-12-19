@@ -112,9 +112,7 @@ const ModulesDashboard: React.FC = () => {
                             variant="outline"
                             size="sm"
                             className="w-full justify-start text-xs"
-                            onClick={() =>
-                              navigate(`/modules/${module.module.id}/${screenId}`)
-                            }
+                            onClick={() => navigate(screen.path)}
                           >
                             {screen.title}
                           </Button>

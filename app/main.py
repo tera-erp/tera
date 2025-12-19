@@ -1,8 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import users, companies, employees, modules
+from app.routers import modules
+from app.modules.company.router import router as company_module_router
+from app.modules.users.router import router as users_module_router
+from app.modules.employees.router import router as employees_module_router
 from app.core.config import settings
-from app.core.database import Base, engine
+
 
 # Module routers (self-contained under app/modules)
 from app.modules.finance.router import router as finance_router
@@ -10,12 +13,17 @@ from app.modules.payroll.router import router as payroll_router
 from app.modules import finance as finance_module
 from app.modules import payroll as payroll_module
 
-# Import module models to register them
+# Import all models to register them with Base.metadata
+# Core models (company, user, employee) are imported in app/modules/core/models.py
+# which imports from individual module files and exports via __all__
+from app.modules.core.models import (  # noqa: F401
+    ModuleSetting,
+    Company,
+    User,
+    EmployeeProfile,
+)
 from app.modules.finance.models import Partner, Invoice, InvoiceLine, Product  # noqa: F401
 from app.modules.payroll.models import PayrollRun, Payslip  # noqa: F401
-from app.models.user import User  # noqa: F401
-from app.models.company import Company  # noqa: F401
-from app.models.employee import EmployeeProfile  # noqa: F401
 
 app = FastAPI(title="Tera ERP Backend", version="1.0.0")
 
@@ -42,9 +50,11 @@ app.add_middleware(
 # Include Routers with /api/v1 prefix
 app.include_router(finance_router, prefix="/api/v1")
 app.include_router(payroll_router, prefix="/api/v1/payroll")
-app.include_router(users.router, prefix="/api/v1")
-app.include_router(companies.router, prefix="/api/v1")
-app.include_router(employees.router, prefix="/api/v1")
+# Register module-wrapped routers for company and users. These wrappers
+# include the legacy routers but make them discoverable as modules too.
+app.include_router(users_module_router, prefix="/api/v1")
+app.include_router(company_module_router, prefix="/api/v1")
+app.include_router(employees_module_router, prefix="/api/v1")
 app.include_router(modules.router, prefix="/api/v1")
 
 @app.get("/")

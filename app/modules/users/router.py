@@ -8,10 +8,11 @@ from sqlalchemy import select, func
 from sqlalchemy.exc import ProgrammingError
 
 from app.core.database import get_db, engine, Base
-from app.models import User, EmployeeProfile, Company
-from app.models.user import UserRole, UserStatus
-from app.models.company import CompanyStatus
-from app.schemas import (
+from .models import User
+from .models import UserRole, UserStatus
+from app.modules.employees.models import EmployeeProfile
+from app.modules.company.models import CompanyStatus, Company
+from .schema import (
     UserCreate, 
     UserUpdate, 
     UserResponse, 

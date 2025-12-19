@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
-from app.models.company import CompanyStatus
+from .models import CompanyStatus
 
 # Base schema with common fields
 class CompanyBase(BaseModel):

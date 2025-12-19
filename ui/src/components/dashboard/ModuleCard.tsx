@@ -65,7 +65,7 @@ const ModuleCard: React.FC<ModuleCardProps> = ({ module, delay = 0 }) => {
           {screenEntries.slice(0, 4).map(([screenId, screen]) => (
             <Link
               key={screenId}
-              to={`/modules/${module.module.id}/${screenId}`}
+              to={screen.path}
               className="rounded-full px-2.5 py-1 text-xs font-medium transition-all hover:scale-105 bg-background/80 text-foreground/80 hover:bg-background"
             >
               {screen.title}
@@ -81,10 +81,8 @@ const ModuleCard: React.FC<ModuleCardProps> = ({ module, delay = 0 }) => {
 
       {/* Link */}
       {(() => {
-        const firstScreenId = screenEntries[0]?.[0];
-        const target = firstScreenId
-          ? `/modules/${module.module.id}/${firstScreenId}`
-          : "/modules";
+        const firstScreenPath = screenEntries[0]?.[1]?.path;
+        const target = firstScreenPath || "/modules";
         return (
           <Link
             to={target}

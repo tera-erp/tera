@@ -30,6 +30,27 @@ export class ModuleFactory {
         this.configs.set(config.module.id, config);
       });
 
+      // Fetch persisted configurables per-module and attach to config as `persisted_configurables`
+      await Promise.all(
+        modules.map(async (config: ModuleConfig) => {
+          try {
+            const resp = await fetch(`/api/v1/modules/${config.module.id}/configurables`, {
+              headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
+            });
+            if (!resp.ok) return;
+            const body = await resp.json();
+            const entry = this.configs.get(config.module.id);
+            if (entry) {
+              (entry as any).persisted_configurables = body?.values || {};
+              this.configs.set(config.module.id, entry);
+            }
+          } catch (e) {
+            // ignore per-module fetch errors
+            console.debug('Failed to fetch persisted configurables for module', config.module.id, e);
+          }
+        })
+      );
+
       return modules;
     } catch (error) {
       console.error('Failed to load modules:', error);

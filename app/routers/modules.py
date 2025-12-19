@@ -3,10 +3,14 @@ Modules router - API endpoints for module system
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from pathlib import Path
+import importlib
+import inspect
 
 from app.core.database import get_db
-from app.modules.core import ModuleLoader, ModuleConfig
+from app.modules.core import ModuleLoader
+from app.modules.core.models import ModuleSetting
 
 router = APIRouter(prefix="/modules", tags=["modules"])
 
@@ -89,6 +93,111 @@ async def get_module_workflows(
     
     config = _module_configs[module_id]
     return config.get('workflows', {})
+
+
+@router.get("/{module_id}/configurables")
+async def get_module_configurables(module_id: str, db: AsyncSession = Depends(get_db)):
+    """Return persisted configurables for a module (merged into declared defaults)."""
+    if module_id not in _module_configs:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Module '{module_id}' not found")
+
+    # Load declared configurables
+    config = _module_configs[module_id]
+    declared = (config.get('configurables') or {})
+
+    # Load persisted values (global / company-agnostic for now)
+    result = await db.execute(select(ModuleSetting).where(ModuleSetting.module_id == module_id))
+    rows = result.scalars().all()
+    persisted = {r.key: r.value for r in rows}
+
+    # Merge: persisted overrides declared defaults
+    merged = {}
+    # declared can be array or object
+    if isinstance(declared, dict):
+        for k, v in declared.items():
+            default = None
+            if isinstance(v, dict):
+                default = v.get('value', v.get('default'))
+            else:
+                default = v
+            merged[k] = persisted.get(k, default)
+    elif isinstance(declared, list):
+        for item in declared:
+            key = item.get('key') or item.get('id')
+            default = item.get('value', item.get('default'))
+            merged[key] = persisted.get(key, default)
+    else:
+        merged = persisted
+
+    return {
+        'declared': declared,
+        'values': merged,
+    }
+
+
+@router.post("/{module_id}/configurables")
+async def save_module_configurables(module_id: str, payload: dict, db: AsyncSession = Depends(get_db)):
+    """Persist module configurable key/value pairs. Upserts per module.
+
+    Currently stores company-agnostic values. Payload expected to be { key: value, ... }
+    """
+    if module_id not in _module_configs:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Module '{module_id}' not found")
+
+    try:
+        # Upsert each key
+        for key, value in payload.items():
+            stmt = select(ModuleSetting).where(ModuleSetting.module_id == module_id, ModuleSetting.key == key)
+            res = await db.execute(stmt)
+            row = res.scalar_one_or_none()
+            if row:
+                row.value = value
+            else:
+                new = ModuleSetting(module_id=module_id, key=key, value=value)
+                db.add(new)
+
+        await db.commit()
+        return {"status": "ok"}
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/{module_id}/fix")
+async def fix_module_schema(module_id: str):
+    """Attempt to run module-provided fix/initialization. Looks for a module `setup.py` with `fix()` or `initialize()`.
+
+    This is intentionally generic: modules can provide a `fix` function to perform DB migrations, seed data, or reinit steps.
+    """
+    if module_id not in _module_configs:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Module '{module_id}' not found")
+
+    # Try importing app.modules.<module_id>.setup
+    try:
+        module_path = f"app.modules.{module_id}.setup"
+        mod = importlib.import_module(module_path)
+    except ModuleNotFoundError as exc:
+        raise HTTPException(status_code=501, detail="Module does not implement a setup.fix or setup.initialize function") from exc
+
+    # Prefer async/sync fix or initialize
+    func = None
+    for name in ("fix", "initialize", "initialize_module"):
+        if hasattr(mod, name) and inspect.isfunction(getattr(mod, name)):
+            func = getattr(mod, name)
+            break
+
+    if not func:
+        raise HTTPException(status_code=501, detail="Module setup module does not export a 'fix' or 'initialize' function")
+
+    try:
+        result = func()
+        # If coroutine, await it
+        if inspect.isawaitable(result):
+            await result
+
+        return {"status": "ok", "message": "Module fix executed"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Module fix failed: {str(e)}") from e
 
 
 @router.get("/{module_id}/permissions")

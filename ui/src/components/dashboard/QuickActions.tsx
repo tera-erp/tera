@@ -22,24 +22,6 @@ const QuickActions: React.FC = () => {
       to: "/test-lab",
     },
     {
-      label: "Employees",
-      icon: Users,
-      variant: "outline" as const,
-      to: "/modules/payroll/employees",
-    },
-    {
-      label: "New Invoice",
-      icon: Plus,
-      variant: "outline" as const,
-      to: "/modules/finance/invoices",
-    },
-    {
-      label: "Run Payroll",
-      icon: RefreshCw,
-      variant: "outline" as const,
-      to: "/modules/payroll/payroll",
-    },
-    {
       label: `${currentLocalization.eInvoice.system}`,
       icon: Send,
       variant: "outline" as const,
