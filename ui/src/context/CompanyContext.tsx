@@ -24,7 +24,7 @@ interface CompanyContextType {
 const CompanyContext = createContext<CompanyContextType | undefined>(undefined);
 
 // Default fallback company - defined outside component to avoid dependency issues
-const DEFAULT_FALLBACK: Company = { id: 0, name: "Loading...", country_code: "ID", currency_code: "IDR" };
+const DEFAULT_FALLBACK: Company = { id: 0, name: "Loading...", country_code: "IDN", currency_code: "IDR" };
 
 export const CompanyProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { isAuthenticated, loading: authLoading } = useAuth();
@@ -112,7 +112,7 @@ export const CompanyProvider: React.FC<{ children: ReactNode }> = ({ children })
   const isLoading = authLoading || (loading && !activeCompany);
 
   // Derive the full localization config based on the Company's Country Code
-  const activeLocalization = getLocalization(company.country_code) || getLocalization("ID")!;
+  const activeLocalization = getLocalization(company.country_code) || getLocalization("IDN")!;
 
   return (
     <CompanyContext.Provider

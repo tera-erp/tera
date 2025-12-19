@@ -14,11 +14,11 @@ import {
 } from "@/components/ui/select";
 
 const countryCodes = [
-  { code: "ID", name: "Indonesia" },
-  { code: "SG", name: "Singapore" },
-  { code: "MY", name: "Malaysia" },
-  { code: "US", name: "United States" },
-  { code: "GB", name: "United Kingdom" },
+  { code: "IDN", name: "Indonesia" },
+  { code: "SGP", name: "Singapore" },
+  { code: "MYS", name: "Malaysia" },
+  { code: "USA", name: "United States" },
+  { code: "GBR", name: "United Kingdom" },
 ];
 
 export default function Setup() {
@@ -36,7 +36,7 @@ export default function Setup() {
     password: "",
     confirmPassword: "",
     company_name: "",
-    country_code: "ID",
+    country_code: "IDN",
   });
 
   // Check if setup has already been completed

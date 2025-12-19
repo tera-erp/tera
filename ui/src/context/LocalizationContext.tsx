@@ -17,9 +17,10 @@ export const LocalizationProvider: React.FC<{ children: ReactNode }> = ({ childr
   const { activeCompany, switchCompany, availableCompanies } = useCompany();
 
   // The single source of truth for localization is the active company
+  // Default to Indonesia if no company or invalid country code
   const currentLocalization = activeCompany
-    ? (getLocalization(activeCompany.country_code))
-    : getLocalization("ID")!;
+    ? (getLocalization(activeCompany.country_code) || getLocalization("IDN")!)
+    : getLocalization("IDN")!;
 
   // Redefine setCountry to switch the company, finding the first company that matches the country code
   const setCountry = useCallback((code: string) => {

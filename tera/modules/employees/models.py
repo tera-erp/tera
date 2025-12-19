@@ -1,7 +1,8 @@
 from datetime import datetime, date
 from typing import Optional
-from sqlalchemy import String, Date, DateTime, ForeignKey, Numeric, Text, Enum as SQLEnum, Boolean
+from sqlalchemy import String, Date, DateTime, ForeignKey, Numeric, Text, Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.ext.hybrid import hybrid_property
 from tera.core.database import Base
 import enum
 
@@ -36,27 +37,14 @@ class Gender(str, enum.Enum):
     FEMALE = "female"
     OTHER = "other"
 
-class PTKPStatus(str, enum.Enum):
-    """PTKP Status for Indonesian Tax (Penghasilan Tidak Kena Pajak)"""
-    TK0 = "TK/0"  # Single, no dependents
-    TK1 = "TK/1"  # Single, 1 dependent
-    TK2 = "TK/2"  # Single, 2 dependents
-    TK3 = "TK/3"  # Single, 3 dependents
-    K0 = "K/0"    # Married, no dependents
-    K1 = "K/1"    # Married, 1 dependent
-    K2 = "K/2"    # Married, 2 dependents
-    K3 = "K/3"    # Married, 3 dependents
-
 class EmployeeProfile(Base):
     __tablename__ = "employee_profiles"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    
-    # User and Company Association
+
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), unique=True, nullable=False, index=True)
     company_id: Mapped[int] = mapped_column(ForeignKey("companies.id"), nullable=False, index=True)
-    
-    # Employee Identification
+
     employee_number: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     
     # Personal Information
@@ -119,22 +107,11 @@ class EmployeeProfile(Base):
     housing_allowance: Mapped[Optional[float]] = mapped_column(Numeric(10, 2), default=0)
     other_allowances: Mapped[Optional[float]] = mapped_column(Numeric(10, 2), default=0)
     
-    # Tax Information (Country-specific)
+    # Localization data (JSON field for country-specific data)
+    localization_data: Mapped[Optional[str]] = mapped_column(Text)
     tax_id: Mapped[Optional[str]] = mapped_column(String(100))  # TIN, NPWP, etc.
-    ptkp_status: Mapped[Optional[PTKPStatus]] = mapped_column(SQLEnum(PTKPStatus))  # For Indonesian employees
     is_tax_resident: Mapped[bool] = mapped_column(default=True, nullable=False)
     tax_exemption: Mapped[bool] = mapped_column(default=False, nullable=False)
-    
-    # Social Security Numbers (Country-specific)
-    social_security_number: Mapped[Optional[str]] = mapped_column(String(100))
-    # Indonesia: BPJS Kesehatan & Ketenagakerjaan
-    bpjs_kesehatan_number: Mapped[Optional[str]] = mapped_column(String(100))
-    bpjs_ketenagakerjaan_number: Mapped[Optional[str]] = mapped_column(String(100))
-    # Malaysia: EPF & SOCSO
-    epf_number: Mapped[Optional[str]] = mapped_column(String(100))
-    socso_number: Mapped[Optional[str]] = mapped_column(String(100))
-    # Singapore: CPF
-    cpf_number: Mapped[Optional[str]] = mapped_column(String(100))
     
     # Bank Details for Payroll
     bank_name: Mapped[Optional[str]] = mapped_column(String(100))

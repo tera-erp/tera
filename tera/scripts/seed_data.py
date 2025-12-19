@@ -23,21 +23,21 @@ async def seed_data():
             print("Creating seed companies...")
             company1 = Company(
                 name="Acme Corporation",
-                country_code="ID",
+                country_code="IDN",
                 currency_code="IDR",
                 address="Jakarta, Indonesia",
                 status="active"
             )
             company2 = Company(
                 name="TechStart Pte Ltd",
-                country_code="SG",
+                country_code="SGP",
                 currency_code="SGD",
                 address="Singapore",
                 status="active"
             )
             company3 = Company(
                 name="Global Trade Sdn Bhd",
-                country_code="MY",
+                country_code="MYS",
                 currency_code="MYR",
                 address="Kuala Lumpur, Malaysia",
                 status="active"
@@ -56,19 +56,19 @@ async def seed_data():
             print("Creating seed customers...")
             partner1 = Partner(
                 name="ABC Supplies Co",
-                country_code="ID",
+                country_code="IDN",
                 email="contact@abcsupplies.com",
                 phone="+62-21-1234567"
             )
             partner2 = Partner(
                 name="XYZ Industries",
-                country_code="SG",
+                country_code="SGP",
                 email="info@xyzind.com",
                 phone="+65-6123-4567"
             )
             partner3 = Partner(
                 name="Global Merchants Ltd",
-                country_code="MY",
+                country_code="MYS",
                 email="sales@globalmerchants.com",
                 phone="+60-3-1234567"
             )

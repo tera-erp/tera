@@ -1,7 +1,7 @@
 """Finance module models.
 Partner and Invoice/InvoiceLine persist to finance/accounting data.
 """
-from sqlalchemy import Column, Integer, String, ForeignKey, Numeric, DateTime, Text
+from sqlalchemy import String, ForeignKey, Numeric, DateTime, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime
 from tera.core.database import Base

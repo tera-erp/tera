@@ -24,7 +24,7 @@ class ModuleSetting(Base):
 # Import core models to register them with Base.metadata
 from tera.modules.company.models import Company, CompanyStatus  # noqa: F401, E402
 from tera.modules.users.models import User, UserRole, UserStatus  # noqa: F401, E402
-from tera.modules.employees.models import EmployeeProfile, EmploymentStatus, EmploymentType, PTKPStatus  # noqa: F401, E402
+from tera.modules.employees.models import EmployeeProfile, EmploymentStatus, EmploymentType  # noqa: F401, E402
 from tera.modules.core.models.module_status import ModuleStatus  # noqa: F401, E402
 
 __all__ = [
@@ -38,5 +38,4 @@ __all__ = [
     "EmployeeProfile",
     "EmploymentStatus",
     "EmploymentType",
-    "PTKPStatus",
 ]

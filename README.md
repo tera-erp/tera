@@ -4,7 +4,7 @@ YAML-driven, module-based workflow/ERP platform. The backend (FastAPI + PostgreS
 
 ## For Devs
 
-### Module Setup (YAML)
+### Modules
 
 - `module`: metadata (`id`, `name`, `version`, `description`, `icon`, `color`).
 - `screens`: list/detail/form/dashboard/custom; endpoints, permissions, layout/widgets/actions.
@@ -34,6 +34,6 @@ External modules are not fully supported without implementing nasty workarounds.
 3. Restart the backend so `initialize_modules()` reloads configs.
 4. Frontend will render list/detail/form screens from the fetched config. Only register custom React components via `ModuleFactory` when you need bespoke UI beyond the generic renderers.
 
-### Extensibility roadmap
+### Extensibility
 
 - Planned support for custom extension modules: pluggable React components and server hooks so users can ship UI/logic without forking core.

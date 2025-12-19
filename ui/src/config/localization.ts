@@ -44,7 +44,7 @@ export interface LocalizationConfig {
 // This configuration can be loaded from an API or database
 export const localizationConfigs: LocalizationConfig[] = [
   {
-    code: "ID",
+    code: "IDN",
     name: "Indonesia",
     flag: "🇮🇩",
     currency: {
@@ -77,7 +77,7 @@ export const localizationConfigs: LocalizationConfig[] = [
     accentColor: "country-id",
   },
   {
-    code: "SG",
+    code: "SGP",
     name: "Singapore",
     flag: "🇸🇬",
     currency: {
@@ -107,7 +107,7 @@ export const localizationConfigs: LocalizationConfig[] = [
     accentColor: "country-sg",
   },
   {
-    code: "MY",
+    code: "MYS",
     name: "Malaysia",
     flag: "🇲🇾",
     currency: {

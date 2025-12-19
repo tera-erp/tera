@@ -6,3 +6,6 @@ The module manages employee profiles, personal information, employment details,
 and compensation data.
 """
 from . import setup  # expose setup for modules.fix invocation
+from .service import EmployeeService  # expose service contract for other modules
+
+__all__ = ["setup", "EmployeeService"]
