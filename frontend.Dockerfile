@@ -2,7 +2,7 @@
 FROM node:20-alpine
 
 # 2. Set Working Directory
-WORKDIR /app
+WORKDIR /frontend
 
 # 3. Copy dependency definitions from 'ui' subdirectory
 COPY ui/package.json ui/package-lock.json ./

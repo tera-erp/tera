@@ -9,19 +9,22 @@ ENV PYTHONUNBUFFERED 1
 # Tell Poetry to not create a new virtual env
 ENV POETRY_VIRTUALENVS_CREATE=false
 
-# 3. Install Poetry
+# 3. Install system dependencies (curl for healthcheck)
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+
+# 4. Install Poetry
 RUN pip install poetry
 
-# 4. Set Working Directory
-WORKDIR /app
+# 5. Set Working Directory
+WORKDIR /tera
 
-# 5. Copy dependency definitions and install
+# 6. Copy dependency definitions and install
 COPY pyproject.toml poetry.lock ./
 RUN poetry install --no-root --no-interaction --no-ansi
 
-# 6. Copy application code
-COPY ./app ./app
+# 7. Copy application code
+COPY ./tera ./tera
 
-# 7. Expose port and set command
+# 8. Expose port and set command
 EXPOSE 8000
-CMD ["poetry", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["poetry", "run", "uvicorn", "tera.main:app", "--host", "0.0.0.0", "--port", "8000"]

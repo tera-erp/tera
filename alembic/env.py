@@ -10,12 +10,15 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.core.config import settings
-from app.core.database import Base
+from tera.core.config import settings
+from tera.core.database import Base
 # Import all models to ensure they're registered with Base.metadata
-from app.models.user import User
-from app.models.company import Company
-from app.models.employee import EmployeeProfile
+from tera.modules.users.models import User
+from tera.modules.company.models import Company
+from tera.modules.employees.models import EmployeeProfile
+from tera.modules.core.models import ModuleSetting, ModuleStatus
+from tera.modules.finance.models import Partner, Product, Invoice, InvoiceLine
+from tera.modules.payroll.models import PayrollRun, Payslip, LeaveBalance, LeaveRequest, Attendance
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

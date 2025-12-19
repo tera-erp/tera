@@ -13,7 +13,7 @@ export class ModuleFactory {
    */
   static async loadModules(): Promise<ModuleConfig[]> {
     try {
-      const response = await fetch('/api/v1/modules', {
+      const response = await fetch('/api/v1/modules/', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
         },

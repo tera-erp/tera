@@ -21,7 +21,7 @@ YAML-driven, module-based workflow/ERP platform. The backend (FastAPI + PostgreS
 ### Getting started
 
 - Prereqs: Python 3.10+ with Poetry; Node.js (LTS) + npm; PostgreSQL.
-- Backend: `poetry install && poetry run uvicorn app.main:app --reload`
+- Backend: `poetry install && poetry run uvicorn tera.main:app --reload`
 - Frontend: `npm install --prefix ui && npm run dev --prefix ui`
 - Database: set env vars used by `app/core/config.py`; run `poetry run alembic upgrade head` (or `python run_migrations.py`).
 

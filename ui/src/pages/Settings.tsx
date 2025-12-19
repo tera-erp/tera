@@ -36,10 +36,15 @@ const Settings = () => {
   const { user } = useAuth();
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [activeTab, setActiveTab] = useState('company');
-  const [modules, setModules] = useState<ModuleMetadata[]>([]);
+  const [modules, setModules] = useState<ModuleMetadata[]>([]); // Modules with configurables
+  const [allModules, setAllModules] = useState<any[]>([]); // All modules for enable/disable (uses ModuleConfig structure from API)
   const [modulesLoading, setModulesLoading] = useState(false);
   const [moduleMessages, setModuleMessages] = useState<Record<string, string>>({});
   const [editableConfigs, setEditableConfigs] = useState<Record<string, Record<string, unknown>>>({});
+  
+  // Module status (enabled/disabled) state
+  const [moduleStatuses, setModuleStatuses] = useState<Record<string, boolean>>({});
+  const [moduleStatusLoading, setModuleStatusLoading] = useState<Record<string, boolean>>({});
 
   // Check if user has admin access based on role from auth context
   const hasAdminAccess = user && (user.role === 'hr_admin' || user.role === 'it_admin');
@@ -83,13 +88,19 @@ const Settings = () => {
       setModulesLoading(true);
       try {
         // Try to get already-registered modules first
-        let regs: ModuleMetadata[] = ModuleFactory.getAllModules();
+        let regs: any[] = ModuleFactory.getAllModules();
         if (!regs || regs.length === 0) {
           // Fallback: fetch from API via factory
           regs = await ModuleFactory.loadModules();
         }
 
         if (!mounted) return;
+
+        console.log('Loaded modules:', regs);
+        console.log('Number of modules:', regs.length);
+
+        // Store ALL modules for enable/disable management
+        setAllModules(regs);
 
         // Only keep modules that declare `configurables` in their config
         const modsWithConfig = regs
@@ -149,6 +160,11 @@ const Settings = () => {
     return () => { mounted = false; };
   }, []);
 
+  // Fetch module statuses on mount
+  useEffect(() => {
+    fetchModuleStatuses();
+  }, []);
+
   const setModuleMessage = (moduleId: string, msg: string) => {
     setModuleMessages((prev) => ({ ...prev, [moduleId]: msg }));
   };
@@ -200,6 +216,53 @@ const Settings = () => {
     }
     setTimeout(() => setModuleMessage(moduleId, ''), 5000);
   };
+
+  // Fetch all module statuses (enabled/disabled)
+  const fetchModuleStatuses = async () => {
+    try {
+      const resp = await fetch('/api/v1/modules/status/all', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
+      });
+      if (!resp.ok) return;
+      const data = await resp.json();
+      const statuses: Record<string, boolean> = {};
+      data.forEach((item: { module_id: string; enabled: boolean }) => {
+        statuses[item.module_id] = item.enabled;
+      });
+      setModuleStatuses(statuses);
+    } catch (err) {
+      console.error('Failed to fetch module statuses', err);
+    }
+  };
+
+  // Toggle module enabled/disabled
+  const handleToggleModule = async (moduleId: string, enabled: boolean) => {
+    setModuleStatusLoading({ ...moduleStatusLoading, [moduleId]: true });
+    try {
+      const resp = await fetch(`/api/v1/modules/${moduleId}/status`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ enabled }),
+      });
+      if (!resp.ok) {
+        const body = await resp.text().catch(() => '');
+        throw new Error(body || `Status ${resp.status}`);
+      }
+      setModuleStatuses({ ...moduleStatuses, [moduleId]: enabled });
+      setModuleMessage(moduleId, `Module ${enabled ? 'enabled' : 'disabled'} successfully`);
+    } catch (err) {
+      console.error('Failed to toggle module', err);
+      const msg = err instanceof Error ? err.message : String(err);
+      setModuleMessage(moduleId, `Failed to update: ${msg}`);
+    } finally {
+      setModuleStatusLoading({ ...moduleStatusLoading, [moduleId]: false });
+    }
+    setTimeout(() => setModuleMessage(moduleId, ''), 3000);
+  };
+
 
   if (!hasAdminAccess) {
     return (
@@ -292,6 +355,7 @@ const Settings = () => {
         <TabsList className="flex gap-2 flex-wrap">
           <TabsTrigger value="company">Company</TabsTrigger>
           <TabsTrigger value="localization">Localization</TabsTrigger>
+          <TabsTrigger value="modules">Modules</TabsTrigger>
           
           {/* Module-specific settings tabs (for modules that expose `configurables`) */}
           {modules.map((m) => (
@@ -576,6 +640,83 @@ const Settings = () => {
                   </div>
                 )}
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Modules Management Tab */}
+        <TabsContent value="modules" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-muted-foreground" />
+                <CardTitle>Module Management</CardTitle>
+              </div>
+              <CardDescription>
+                Enable or disable modules for this company. Disabled modules will not be accessible to users.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Alert className="border-l-4 border-l-amber-500 bg-amber-50">
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                <AlertTitle className="text-amber-900">Security Notice</AlertTitle>
+                <AlertDescription className="text-amber-800">
+                  Only enable modules you trust and need. Disabling a module will prevent all users from accessing its features.
+                </AlertDescription>
+              </Alert>
+
+              {console.log('Rendering Modules tab - modulesLoading:', modulesLoading, 'allModules.length:', allModules.length)}
+              {modulesLoading ? (
+                <div className="text-center py-8 text-muted-foreground">Loading modules...</div>
+              ) : allModules.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">No modules found</div>
+              ) : (
+                <div className="space-y-3">
+                  {allModules.map((m) => {
+                    const moduleId = m.module.id;
+                    const isSystemModule = ['company', 'users', 'core'].includes(moduleId);
+                    const isEnabled = moduleStatuses[moduleId] !== false; // Default to enabled if not set
+                    const isLoading = moduleStatusLoading[moduleId];
+                    const message = moduleMessages[moduleId];
+
+                    return (
+                      <div
+                        key={moduleId}
+                        className="flex items-center justify-between rounded-lg border border-border p-4 hover:bg-secondary/30 transition-colors"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3">
+                            <h4 className="font-semibold">{m.module.name}</h4>
+                            {isSystemModule ? (
+                              <Badge variant="outline" className="border-blue-500 text-blue-700 bg-blue-50">
+                                <Shield className="h-3 w-3 mr-1" />
+                                System
+                              </Badge>
+                            ) : (
+                              <Badge variant={isEnabled ? 'default' : 'secondary'}>
+                                {isEnabled ? 'Enabled' : 'Disabled'}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {m.module.description || `Module: ${moduleId}`}
+                            {isSystemModule && ' • Required for core functionality'}
+                          </p>
+                          {message && (
+                            <p className="text-sm mt-2 text-blue-600">{message}</p>
+                          )}
+                        </div>
+                        <Switch
+                          checked={isEnabled}
+                          disabled={isLoading || isSystemModule}
+                          onCheckedChange={(checked) => handleToggleModule(moduleId, checked)}
+                          className="ml-4"
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

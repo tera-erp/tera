@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { Loader2, AlertCircle, Server } from "lucide-react";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Setup from "./pages/Setup";
@@ -17,6 +18,8 @@ import { CompanyProvider } from "./context/CompanyContext";
 import { LocalizationProvider } from "./context/LocalizationContext";
 import { AuthProvider } from "./context/AuthContext";
 import { useAuth } from "./context/AuthContext";
+import { useBackendHealth } from "./hooks/useBackendHealth";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +41,7 @@ const checkSetupStatus = async () => {
 const AppWithSetupCheck = () => {
   const [setupNeeded, setSetupNeeded] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
+  const backendHealth = useBackendHealth();
 
   useEffect(() => {
     const checkSetup = async () => {
@@ -52,11 +56,55 @@ const AppWithSetupCheck = () => {
       }
     };
 
-    checkSetup();
-  }, []);
+    // Only check setup if backend is healthy
+    if (backendHealth.isHealthy) {
+      checkSetup();
+    } else if (!backendHealth.isLoading && backendHealth.error) {
+      setLoading(false);
+    }
+  }, [backendHealth.isHealthy, backendHealth.isLoading]);
+
+  // Show backend health status
+  if (backendHealth.isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
+          <div>
+            <h2 className="text-xl font-semibold text-foreground">Tera is booting up...</h2>
+            <p className="text-muted-foreground mt-2">
+              {backendHealth.error || 'Waiting for services to be ready.'}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!backendHealth.isHealthy && backendHealth.error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Alert className="max-w-md border-destructive">
+          <AlertCircle className="h-4 w-4 text-destructive" />
+          <AlertTitle>Connection Error</AlertTitle>
+          <AlertDescription className="mt-2 space-y-2">
+            <p>{backendHealth.error}</p>
+            <div className="flex items-center gap-2 mt-4 text-sm text-muted-foreground">
+              <Server className="h-4 w-4" />
+              <span>Please ensure Tera is running</span>
+            </div>
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
   if (setupNeeded) {

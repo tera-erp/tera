@@ -28,7 +28,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./app:/app/app # Mount local 'app' src to container for live reload
+      - ./tera:/tera/tera # Mount local 'tera' src to container for live reload
     environment:
       - PROJECT_NAME=TeraERP
       - SECRET_KEY=a-very-secret-key-that-you-should-change
@@ -42,6 +42,12 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   frontend:
     build:
@@ -51,8 +57,8 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ./ui:/app # Mount local 'ui' src to container for live reload
-      - /app/node_modules # Isolate node_modules in the container
+      - ./ui:/tera # Mount local 'ui' src to container for live reload
+      - /tera/node_modules # Isolate node_modules in the container
     depends_on:
       backend:
         condition: service_started
