@@ -104,7 +104,15 @@ const Sidebar: React.FC = () => {
                 No modules installed
               </div>
             ) : (
-              modules.map((module) => {
+              modules
+                .filter((module) => {
+                  // Only show modules that have menu items or screens to display
+                  const hasMenu = module.menu && module.menu.length > 0;
+                  const hasScreens = module.screens && 
+                    Object.values(module.screens).some(screen => screen.show_in_nav !== false);
+                  return hasMenu || hasScreens;
+                })
+                .map((module) => {
                 const ModuleIcon = getIconComponent(module.module.icon);
                 const screens = module.screens 
                   ? Object.entries(module.screens).filter(([_, screen]) => screen.show_in_nav !== false)

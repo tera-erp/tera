@@ -90,8 +90,18 @@ const Settings = () => {
         // Try to get already-registered modules first
         let regs: any[] = ModuleFactory.getAllModules();
         if (!regs || regs.length === 0) {
-          // Fallback: fetch from API via factory
-          regs = await ModuleFactory.loadModules();
+          // Fallback: fetch ALL modules from API (including disabled ones) for Settings page
+          const response = await fetch('/api/v1/modules/all', {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+            },
+          });
+          if (response.ok) {
+            regs = await response.json();
+          } else {
+            // If /all endpoint fails, try the regular endpoint
+            regs = await ModuleFactory.loadModules();
+          }
         }
 
         if (!mounted) return;

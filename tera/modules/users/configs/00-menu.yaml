@@ -1,0 +1,4 @@
+# User management menu configuration
+# This is a system module - typically accessed through Settings
+# Empty menu means it won't appear in the main sidebar navigation
+menu: []

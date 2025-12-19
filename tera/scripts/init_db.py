@@ -10,9 +10,10 @@ Run with: python -m tera.scripts.init_db
 import asyncio
 from tera.core.database import engine, Base
 # Import all models to register them with Base.metadata
-# app/modules/core/models.py imports all module-specific models
+# tera/modules/core/models.py imports all module-specific models
 from tera.modules.core.models import (  # noqa: F401
     ModuleSetting,
+    ModuleStatus,
     Company,
     User,
     EmployeeProfile,

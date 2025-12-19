@@ -1,0 +1,9 @@
+# Base module configuration
+module:
+  id: employees
+  name: Employees
+  version: 1.0.0
+  description: Employee profile and information management
+  author: Tera ERP
+  icon: Users
+  color: module-hr

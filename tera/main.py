@@ -1,11 +1,64 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 from pathlib import Path
 
 from tera.core.config import settings
 from tera.modules.core import registry
 from tera.routers import modules
 from . import VERSION
+
+
+class ModuleStatusMiddleware(BaseHTTPMiddleware):
+    """Middleware to check if a module is enabled before processing requests"""
+
+    async def dispatch(self, request: Request, call_next):
+        # Extract module name from path
+        path = request.url.path
+
+        # Skip checks for non-module endpoints
+        if not path.startswith('/api/v1/'):
+            return await call_next(request)
+
+        # Skip checks for system endpoints
+        system_endpoints = ['/api/v1/users', '/api/v1/companies', '/api/v1/modules', '/api/v1/health']
+        if any(path.startswith(endpoint) for endpoint in system_endpoints):
+            return await call_next(request)
+
+        # Extract module name from path (e.g., /api/v1/finance/... -> finance)
+        parts = path.split('/')
+        if len(parts) > 3:
+
+            # Import here to avoid circular imports
+            from tera.modules.core.models import ModuleStatus
+            from sqlalchemy import select
+            from tera.core.database import AsyncSessionLocal
+
+            # Check if module is enabled
+            try:
+                async with AsyncSessionLocal() as db:
+                    stmt = select(ModuleStatus).where(
+                        ModuleStatus.module_id == module_name
+                    )
+                    result = await db.execute(stmt)
+                    status = result.scalar_one_or_none()
+
+                    # If status exists and module is disabled, block access
+                    if status is not None and not status.enabled:
+                        return JSONResponse(
+                            status_code=403,
+                            content={
+                                "detail": f"Module '{module_name}' is disabled. Enable it in Settings to access this functionality."
+                            }
+                        )
+            except Exception as e:
+                # Log error but allow request to proceed to avoid breaking the app
+                print(f"Error checking module status for {module_name}: {e}")
+
+        return await call_next(request)
+
 
 # Initialize FastAPI app
 app = FastAPI(title="Tera Backend", version=VERSION)
@@ -32,6 +85,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add module status check middleware
+app.add_middleware(ModuleStatusMiddleware)
+
 # Dynamically include all registered module routers
 for module_name, router in registry.get_routers().items():
     # Determine prefix based on module
@@ -52,6 +108,7 @@ async def root():
     module_list = list(registry.get_configs().keys())
     return {"status": "System Online", "modules": module_list}
 
+@app.get("/health")
 @app.get("/api/v1/health")
 async def health_check():
     return {

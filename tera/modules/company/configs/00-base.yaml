@@ -2,6 +2,8 @@ module:
   id: company
   name: Company
   description: Core company management module
+  icon: Building2
+  color: module-core
 configurables:
   default_currency:
     label: Default Currency
@@ -20,3 +22,5 @@ configurables:
     type: boolean
     default: false
 screens: {}
+# No menu - this is a system/infrastructure module that shouldn't appear in sidebar
+menu: []

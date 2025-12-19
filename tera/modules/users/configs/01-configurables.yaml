@@ -1,0 +1,30 @@
+configurables:
+  default_role:
+    label: Default Role for New Users
+    type: select
+    description: Role assigned to newly created users by default
+    default: employee
+    options:
+      - { value: employee, label: Employee }
+      - { value: hr_admin, label: HR Admin }
+      - { value: admin, label: Administrator }
+      - { value: it_admin, label: IT Admin }
+      - { value: viewer, label: Viewer }
+
+  require_email_verification:
+    label: Require Email Verification
+    type: boolean
+    description: Whether users must verify email before accessing the system
+    default: true
+
+  password_min_length:
+    label: Password Minimum Length
+    type: number
+    description: Minimum number of characters for user passwords
+    default: 8
+
+  allow_self_registration:
+    label: Allow Self Registration
+    type: boolean
+    description: Allow users to register themselves (may require admin approval)
+    default: false

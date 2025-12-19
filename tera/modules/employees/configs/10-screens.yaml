@@ -1,0 +1,57 @@
+# Employee management screens
+screens:
+  employees_list:
+    title: Employees
+    description: Manage employee profiles and information
+    path: /modules/employees
+    type: list
+    endpoint: /api/v1/employees/
+    permissions: [employees.view]
+    show_in_nav: true
+    list_config:
+      columns: 
+        - employee_number
+        - user_id
+        - company_id
+        - employment_status
+        - employment_type
+        - department
+        - position
+      searchable_fields: 
+        - employee_number
+        - department
+        - position
+      sortable: true
+      filterable: true
+      paginated: true
+      page_size: 25
+      selectable: true
+      row_actions:
+        - id: view
+          label: View
+          icon: Eye
+          action: view
+        - id: edit
+          label: Edit
+          icon: Edit2
+          action: edit
+        - id: delete
+          label: Deactivate
+          icon: UserX
+          action: delete
+          color: destructive
+          confirm: true
+
+  employee_detail:
+    title: Employee Profile
+    description: View and edit employee profile information
+    path: /modules/employees/:id
+    type: detail
+    endpoint: /api/v1/employees/{id}
+    permissions: [employees.view]
+    show_in_nav: false
+    detail_config:
+      show_metadata: true
+      actions:
+        - edit
+        - delete

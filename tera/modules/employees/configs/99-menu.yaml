@@ -1,0 +1,21 @@
+# Permissions and menu configuration
+permissions:
+  - employees.view
+  - employees.create
+  - employees.edit
+  - employees.delete
+  - employees.manage
+
+menu:
+  - id: employees_module
+    title: Employees
+    icon: Users
+    items:
+      - title: All Employees
+        path: /modules/employees
+        icon: Users
+        permission: employees.view
+      - title: Add Employee
+        path: /modules/employees/new
+        icon: UserPlus
+        permission: employees.create

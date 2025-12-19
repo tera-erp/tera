@@ -10,9 +10,7 @@ class UserRole(str, enum.Enum):
     ADMIN = "admin"
     HR_ADMIN = "hr_admin"
     IT_ADMIN = "it_admin"
-    MANAGER = "manager"
     EMPLOYEE = "employee"
-    ACCOUNTANT = "accountant"
     VIEWER = "viewer"
 
 class UserStatus(str, enum.Enum):
