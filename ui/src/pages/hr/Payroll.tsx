@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
-import PayrollSimulator from '@/components/hr/PayrollSimulator';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -296,7 +295,6 @@ const Payroll = () => {
           <div className="grid gap-6 lg:grid-cols-3">
             {/* Left - Payroll Simulator */}
             <div className="lg:col-span-1">
-              <PayrollSimulator />
             </div>
 
             {/* Right - Payroll Information */}

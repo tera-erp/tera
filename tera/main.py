@@ -70,6 +70,10 @@ registry.initialize(modules_dir)
 # Initialize module configs for the modules router
 modules.initialize_modules()
 
+# Initialize localizations - register all country-specific handlers
+from tera.modules.employees import localization as employee_localization  # noqa: F401
+from tera.modules.payroll import localization as payroll_localization  # noqa: F401
+
 # CORS Middleware - Allow frontend to communicate with backend
 # Convert CORS origins from settings (which are pydantic AnyHttpUrl objects) to strings
 cors_origins = [str(origin) for origin in settings.BACKEND_CORS_ORIGINS] if settings.BACKEND_CORS_ORIGINS else []
@@ -102,6 +106,14 @@ for module_name, router in registry.get_routers().items():
 
 # Include the modules system router
 app.include_router(modules.router, prefix="/api/v1")
+
+# Include reference data router for common lookups
+from tera.routers import reference
+app.include_router(reference.router, prefix="/api/v1")
+
+# Include localization router for country-specific requirements
+from tera.routers import localization
+app.include_router(localization.router, prefix="/api/v1")
 
 @app.get("/")
 async def root():

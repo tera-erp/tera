@@ -88,6 +88,11 @@ forms:
         type: select
         label: Currency
         required: true
+        endpoint: /api/v1/companies/current
+        display_field: currency_code
+        value_field: currency_code
+        help_text: Defaults to company currency
+        clearable: false
         options:
           - value: USD
             label: USD
@@ -95,7 +100,12 @@ forms:
             label: EUR
           - value: GBP
             label: GBP
-        default: USD
+          - value: IDR
+            label: IDR
+          - value: SGD
+            label: SGD
+          - value: MYR
+            label: MYR
         size: half
 
       amount_untaxed:

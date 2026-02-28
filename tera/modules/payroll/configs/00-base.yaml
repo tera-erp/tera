@@ -1,9 +1,9 @@
 # Base module configuration
 module:
   id: payroll
-  name: Payroll & HR
+  name: Payroll
   version: 2.0.0
-  description: Employee management, payroll processing, and compliance
+  description: Payroll processing, payslips, leave management, and compliance
   author: Tera ERP
-  icon: Users
-  color: module-hr
+  icon: Calculator
+  color: module-payroll

@@ -9,7 +9,7 @@ from tera.modules.core.document_engine import DocumentData, PartyData, LineItemD
 
 class InvoiceDocumentHelper:
     """Helper for generating invoice documents"""
-    
+
     @staticmethod
     def prepare_document_data(
         invoice_id: int,
@@ -28,24 +28,24 @@ class InvoiceDocumentHelper:
     ) -> DocumentData:
         """Prepare invoice data for document generation"""
         parties = {
-            "customer": PartyData(
+            "customer":
+            PartyData(
                 name=customer_name,
                 email=customer_email,
                 phone=customer_phone,
                 country_code=customer_country,
             )
         }
-        
+
         items = [
             LineItemData(
                 description=item.get("product_name", ""),
                 quantity=float(item.get("quantity", 1)),
                 unit_price=float(item.get("price_unit", 0)),
                 amount=float(item.get("amount", 0)),
-            )
-            for item in line_items
+            ) for item in line_items
         ]
-        
+
         return DocumentData(
             document_type="invoice",
             document_number=invoice_number,
@@ -60,7 +60,7 @@ class InvoiceDocumentHelper:
 
 class PayslipDocumentHelper:
     """Helper for generating payslip documents"""
-    
+
     @staticmethod
     def prepare_document_data(
         payslip_id: int,
@@ -80,16 +80,17 @@ class PayslipDocumentHelper:
     ) -> DocumentData:
         """Prepare payslip data for document generation"""
         parties = {
-            "employee": PartyData(
+            "employee":
+            PartyData(
                 name=employee_name,
                 email=employee_email,
                 phone=employee_phone,
             )
         }
-        
+
         # Combine salary and deduction components
         line_items = []
-        
+
         # Add salary components
         for component in salary_components:
             line_items.append(
@@ -98,9 +99,8 @@ class PayslipDocumentHelper:
                     quantity=1.0,
                     unit_price=float(component.get("amount", 0)),
                     amount=float(component.get("amount", 0)),
-                )
-            )
-        
+                ))
+
         # Add deduction components
         for component in deduction_components:
             line_items.append(
@@ -109,16 +109,16 @@ class PayslipDocumentHelper:
                     quantity=1.0,
                     unit_price=-float(component.get("amount", 0)),
                     amount=-float(component.get("amount", 0)),
-                )
-            )
-        
+                ))
+
         return DocumentData(
             document_type="payslip",
             document_number=payslip_number,
             date_issued=payroll_date,
             currency=currency,
             amount_total=net_salary,
-            notes=notes or f"Gross: {gross_salary:.2f} | Deductions: {deductions:.2f} | Net: {net_salary:.2f}",
+            notes=notes or
+            f"Gross: {gross_salary:.2f} | Deductions: {deductions:.2f} | Net: {net_salary:.2f}",
             parties=parties,
             line_items=line_items,
         )
@@ -126,7 +126,7 @@ class PayslipDocumentHelper:
 
 class ReportDocumentHelper:
     """Helper for generating generic reports"""
-    
+
     @staticmethod
     def prepare_document_data(
         report_number: str,
@@ -139,20 +139,20 @@ class ReportDocumentHelper:
     ) -> DocumentData:
         """Prepare report data for document generation"""
         line_items = []
-        
+
         # Convert sections to line items
         for section in sections:
             if isinstance(section.get("items"), list):
                 for item in section["items"]:
                     line_items.append(
                         LineItemData(
-                            description=f"{section.get('title', '')} - {item.get('description', '')}",
+                            description=
+                            f"{section.get('title', '')} - {item.get('description', '')}",
                             quantity=float(item.get("quantity", 1)),
                             unit_price=float(item.get("amount", 0)),
                             amount=float(item.get("amount", 0)),
-                        )
-                    )
-        
+                        ))
+
         return DocumentData(
             document_type="report",
             document_number=report_number,

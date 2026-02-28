@@ -7,7 +7,7 @@ from .models import CompanyStatus
 class CompanyBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     legal_name: str = Field(..., min_length=1, max_length=255)
-    country_code: str = Field(..., min_length=2, max_length=2)  # ISO 3166-1 alpha-2
+    country_code: str = Field(..., min_length=3, max_length=3)  # ISO 3166-1 alpha-3
     currency_code: str = Field(..., min_length=3, max_length=3)  # ISO 4217
     timezone: str = Field(default="UTC", max_length=50)
 
@@ -35,7 +35,7 @@ class CompanyCreate(CompanyBase):
 class CompanyUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     legal_name: Optional[str] = Field(None, min_length=1, max_length=255)
-    country_code: Optional[str] = Field(None, min_length=2, max_length=2)
+    country_code: Optional[str] = Field(None, min_length=3, max_length=3)
     currency_code: Optional[str] = Field(None, min_length=3, max_length=3)
     timezone: Optional[str] = Field(None, max_length=50)
     tax_id: Optional[str] = Field(None, max_length=100)

@@ -5,6 +5,7 @@ import { FormRenderer, ListRenderer, DetailRenderer } from '@/modules/components
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { AlertCircle, Loader2 } from 'lucide-react';
+import { useCompany } from '@/context/CompanyContext';
 
 interface DynamicScreenProps {
   moduleId: string;
@@ -15,6 +16,7 @@ export const DynamicScreen: React.FC<DynamicScreenProps> = ({ moduleId, screenId
   const navigate = useNavigate();
   const { id: recordId } = useParams<{ id?: string }>();
   const [editMode, setEditMode] = useState(false);
+  const { activeCompany } = useCompany();
 
   // Get module config
   const moduleConfig = ModuleFactory.getModule(moduleId);
@@ -225,6 +227,7 @@ export const DynamicScreen: React.FC<DynamicScreenProps> = ({ moduleId, screenId
           onCancel={() => navigate(resolvePath(screenId))}
           loading={editMutation.isPending}
           readOnly={false}
+          company={activeCompany}
         />
       );
 

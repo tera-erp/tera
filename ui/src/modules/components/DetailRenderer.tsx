@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AlertCircle, ArrowLeft, Loader2, Edit2, Trash2 } from 'lucide-react';
+import { useCompany } from '@/context/CompanyContext';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -57,6 +58,7 @@ export const DetailRenderer: React.FC<DetailRendererProps> = ({
 }) => {
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const { activeCompany } = useCompany();
 
   const detailConfig = config.detail_config;
 
@@ -121,6 +123,7 @@ export const DetailRenderer: React.FC<DetailRendererProps> = ({
             loading={submitLoading}
             readOnly={false}
             isEditing={false}
+            company={activeCompany}
           />
         );
       }  if (!data && !isCreating) {
@@ -201,6 +204,7 @@ export const DetailRenderer: React.FC<DetailRendererProps> = ({
               loading={submitLoading}
               isEditing={true}
               workflowState={workflowState}
+              company={activeCompany}
             />
           ) : (
             // Display mode - with better field formatting

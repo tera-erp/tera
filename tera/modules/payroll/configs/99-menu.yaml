@@ -1,12 +1,5 @@
 # Permissions and menu configuration
 permissions:
-  # Employee Management
-  - payroll.view_employee
-  - payroll.create_employee
-  - payroll.edit_employee
-  - payroll.delete_employee
-  - payroll.manage_employee
-  
   # Payroll Processing
   - payroll.view_payroll
   - payroll.create_payroll
@@ -35,13 +28,9 @@ permissions:
 
 menu:
   - id: payroll_module
-    title: Payroll & HR
-    icon: Users
+    title: Payroll
+    icon: Calculator
     items:
-      - title: Employees
-        path: /modules/payroll/employees
-        icon: Users
-        permission: payroll.view_employee
       - title: Payroll Runs
         path: /modules/payroll/payroll-runs
         icon: Calculator

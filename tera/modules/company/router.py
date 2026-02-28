@@ -1,136 +1,153 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, distinct
 from tera.core.database import get_db
 from .models import Company
-from .schema import (
-    CompanyCreate,
-    CompanyUpdate,
-    CompanyResponse,
-    CompanyListItem
-)
+from .schema import (CompanyCreate, CompanyUpdate, CompanyResponse,
+                     CompanyListItem)
 from datetime import datetime
 
 router = APIRouter(prefix="/companies", tags=["companies"])
 
-@router.post("/", response_model=CompanyResponse, status_code=status.HTTP_201_CREATED)
-async def create_company(
-    company_data: CompanyCreate,
-    db: AsyncSession = Depends(get_db)
-):
+
+@router.post("/",
+             response_model=CompanyResponse,
+             status_code=status.HTTP_201_CREATED)
+async def create_company(company_data: CompanyCreate,
+                         db: AsyncSession = Depends(get_db)):
     """Create a new company"""
     # Check if company name already exists
     result = await db.execute(
-        select(Company).where(Company.name == company_data.name)
-    )
+        select(Company).where(Company.name == company_data.name))
     if result.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Company name already exists"
-        )
-    
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Company name already exists")
+
     # Create new company
     company = Company(**company_data.model_dump())
-    
+
     db.add(company)
     await db.commit()
     await db.refresh(company)
-    
+
     return company
 
+
 @router.get("/", response_model=List[CompanyListItem])
-async def list_companies(
-    skip: int = 0,
-    limit: int = 100,
-    status_filter: str = None,
-    db: AsyncSession = Depends(get_db)
-):
+async def list_companies(skip: int = 0,
+                         limit: int = 100,
+                         status_filter: str = None,
+                         db: AsyncSession = Depends(get_db)):
     """List all companies"""
     query = select(Company)
-    
+
     if status_filter:
         query = query.where(Company.status == status_filter)
-    
+
     query = query.offset(skip).limit(limit)
     result = await db.execute(query)
     companies = result.scalars().all()
-    
+
     return companies
 
-@router.get("/{company_id}", response_model=CompanyResponse)
-async def get_company(
-    company_id: int,
-    db: AsyncSession = Depends(get_db)
-):
-    """Get a specific company by ID"""
-    result = await db.execute(
-        select(Company).where(Company.id == company_id)
-    )
-    company = result.scalar_one_or_none()
+
+@router.get("/current", response_model=CompanyResponse)
+async def get_current_company(db: AsyncSession = Depends(get_db)):
+    """
+    Get the current company context.
     
+    This endpoint returns the company settings for the current user's context.
+    In a multi-tenant setup, this would be determined by the user's JWT token.
+    For now, it returns the first active company as a default.
+    
+    TODO: Implement proper company context from JWT/session
+    """
+    result = await db.execute(
+        select(Company).where(Company.status == "active").limit(1))
+    company = result.scalar_one_or_none()
+
     if not company:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Company not found"
-        )
-    
+            detail="No active company found. Please create a company first.")
+
     return company
 
-@router.patch("/{company_id}", response_model=CompanyResponse)
-async def update_company(
-    company_id: int,
-    company_data: CompanyUpdate,
-    db: AsyncSession = Depends(get_db)
-):
-    """Update a company"""
-    result = await db.execute(
-        select(Company).where(Company.id == company_id)
-    )
+
+@router.get("/{company_id}", response_model=CompanyResponse)
+async def get_company(company_id: int, db: AsyncSession = Depends(get_db)):
+    """Get a specific company by ID"""
+    result = await db.execute(select(Company).where(Company.id == company_id))
     company = result.scalar_one_or_none()
-    
+
     if not company:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Company not found"
-        )
-    
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail="Company not found")
+
+    return company
+
+
+@router.patch("/{company_id}", response_model=CompanyResponse)
+async def update_company(company_id: int,
+                         company_data: CompanyUpdate,
+                         db: AsyncSession = Depends(get_db)):
+    """Update a company"""
+    result = await db.execute(select(Company).where(Company.id == company_id))
+    company = result.scalar_one_or_none()
+
+    if not company:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail="Company not found")
+
     # Update fields
     update_data = company_data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(company, field, value)
-    
+
     company.updated_at = datetime.utcnow()
     await db.commit()
     await db.refresh(company)
-    
+
     return company
 
+
 @router.delete("/{company_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_company(
-    company_id: int,
-    db: AsyncSession = Depends(get_db)
-):
+async def delete_company(company_id: int, db: AsyncSession = Depends(get_db)):
     """Delete a company"""
-    result = await db.execute(
-        select(Company).where(Company.id == company_id)
-    )
+    result = await db.execute(select(Company).where(Company.id == company_id))
     company = result.scalar_one_or_none()
-    
+
     if not company:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Company not found"
-        )
-    
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail="Company not found")
+
     # Check if company has users
     if company.users:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot delete company with existing users"
-        )
-    
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Cannot delete company with existing users")
+
     await db.delete(company)
     await db.commit()
-    
+
     return None
+
+
+@router.get("/currencies", response_model=List[str])
+async def get_company_currencies(db: AsyncSession = Depends(get_db)):
+    """Get currencies actually used by companies in the system"""
+    result = await db.execute(
+        select(distinct(
+            Company.currency_code)).where(Company.status == "active"))
+    currencies = result.scalars().all()
+    return sorted(currencies) if currencies else ["USD"]
+
+
+@router.get("/countries", response_model=List[str])
+async def get_company_countries(db: AsyncSession = Depends(get_db)):
+    """Get countries where companies are registered"""
+    result = await db.execute(
+        select(distinct(
+            Company.country_code)).where(Company.status == "active"))
+    countries = result.scalars().all()
+    return sorted(countries) if countries else ["US"]

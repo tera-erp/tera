@@ -1,7 +1,6 @@
 import React from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import InvoiceForm from '@/components/finance/InvoiceForm';
-import PayrollSimulator from '@/components/hr/PayrollSimulator';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Info } from 'lucide-react';
 import { useLocalization } from '@/context/LocalizationContext';
@@ -30,7 +29,6 @@ const TestLab = () => {
 
                 <div className="grid md:grid-cols-2 gap-8">
                     <InvoiceForm />
-                    <PayrollSimulator />
                 </div>
             </div>
         </MainLayout>

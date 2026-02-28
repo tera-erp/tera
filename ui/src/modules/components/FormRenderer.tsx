@@ -30,6 +30,7 @@ interface FormRendererProps {
   readOnly?: boolean;
   isEditing?: boolean;
   workflowState?: string;
+  company?: Record<string, any>;
 }
 
 interface FormErrors {
@@ -45,6 +46,7 @@ export const FormRenderer: React.FC<FormRendererProps> = ({
   readOnly = false,
   isEditing = false,
   workflowState,
+  company,
 }) => {
   // Use edit-specific title/description if in edit mode and available
   const displayTitle = isEditing && config.edit_title ? config.edit_title : config.title;
@@ -108,21 +110,23 @@ export const FormRenderer: React.FC<FormRendererProps> = ({
 
   const evaluateCondition = (expression: string, data: Record<string, any>): boolean => {
     try {
-      // Create a safe evaluation context
-      const context = new Function('data', `return ${expression}`);
-      return context(data);
-    } catch {
-      console.warn(`Failed to evaluate condition: ${expression}`);
+      // Create a safe evaluation context with company data available
+      const contextData = { ...data, company: company || {} };
+      const context = new Function('data', 'company', `return ${expression}`);
+      return context(contextData, company || {});
+    } catch (error) {
+      console.warn(`Failed to evaluate condition: ${expression}`, error);
       return false;
     }
   };
 
   const evaluateFormula = (expression: string, data: Record<string, any>): any => {
     try {
-      const context = new Function('data', `return ${expression}`);
-      return context(data);
-    } catch {
-      console.warn(`Failed to evaluate formula: ${expression}`);
+      const contextData = { ...data, company: company || {} };
+      const context = new Function('data', 'company', `return ${expression}`);
+      return context(contextData, company || {});
+    } catch (error) {
+      console.warn(`Failed to evaluate formula: ${expression}`, error);
       return null;
     }
   };

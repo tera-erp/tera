@@ -2,7 +2,7 @@
 
 ## Overview
 
-A comprehensive HR & Payroll management system with full localization support for Indonesia (ID), Malaysia (MY), and Singapore (SG). Inspired by enterprise solutions like SAP and Odoo.
+A comprehensive HR & Payroll management system with full localization support for Indonesia (IDN), Malaysia (MYS), and Singapore (SGP). Inspired by enterprise solutions like SAP and Odoo.
 
 ## Key Features
 
@@ -24,17 +24,17 @@ A comprehensive HR & Payroll management system with full localization support fo
 
 ### 3. Localization Support ✅
 
-#### Indonesia (ID)
+#### Indonesia (IDN)
 - BPJS Kesehatan, Ketenagakerjaan (JHT, JP, JKK, JKM)
 - PPh 21 with progressive brackets and PTKP
 - Minimum wage and severance pay calculations
 
-#### Malaysia (MY)
+#### Malaysia (MYS)
 - EPF, SOCSO, EIS, HRDF
 - PCB (Monthly Tax Deduction)
 - Minimum wage enforcement
 
-#### Singapore (SG)
+#### Singapore (SGP)
 - CPF (age-based rates)
 - SDL (Skills Development Levy)
 - Progressive tax with reliefs
@@ -140,7 +140,7 @@ curl -X POST http://localhost:8000/api/v1/payroll/employees/ \
   -d '{
     "name": "John Doe",
     "email": "john@example.com",
-    "country": "ID",
+    "country": "USA",
     "base_salary": 10000000,
     "ptkp_status": "K/1"
   }'
