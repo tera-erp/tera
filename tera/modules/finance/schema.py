@@ -3,6 +3,7 @@ from typing import List, Optional
 from datetime import datetime
 from decimal import Decimal
 
+
 class InvoiceLineCreate(BaseModel):
     product_id: Optional[int] = None
     product_name: Optional[str] = None
@@ -92,7 +93,9 @@ class CustomerCreate(BaseModel):
 
 class CustomerUpdate(BaseModel):
     name: Optional[str] = None
-    country_code: Optional[str] = Field(default=None, min_length=3, max_length=3)
+    country_code: Optional[str] = Field(default=None,
+                                        min_length=3,
+                                        max_length=3)
     email: Optional[str] = None
     phone: Optional[str] = None
     tax_id: Optional[str] = None

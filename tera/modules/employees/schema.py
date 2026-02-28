@@ -11,7 +11,6 @@ class EmployeeProfileBase(BaseModel):
     employment_type: str = EmploymentType.FULL_TIME
     hire_date: date
 
-
 class EmployeeProfileCreate(EmployeeProfileBase):
     pass
 
